@@ -1,11 +1,7 @@
 dist: xenial
 
 language: java
-install: skip
 
 jdk:
   - openjdk11
   - openjdk14
-
-script:
-  - ./gradlew build --scan -s
