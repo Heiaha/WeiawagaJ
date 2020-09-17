@@ -1,9 +1,5 @@
 <h1 align="center">Weiawaga</h1>
 
-<p align="center">
-  <a href="https://travis-ci.org/Weiawaga/Weiawaga.svg?branch=master"><img src="https://img.shields.io/travis/Weiawaga/Weiawaga"></a>
-</p>
-
 A UCI chess engine written in Java
 
 ## Features
