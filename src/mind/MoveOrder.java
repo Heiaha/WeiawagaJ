@@ -20,20 +20,32 @@ public class MoveOrder {
     }
     
     public static MoveList moveOrdering(final Board board, final MoveList moves){
+        MoveList sortedMoves = new MoveList();
         MoveList promotions = new MoveList();
         MoveList captures = new MoveList();
         MoveList quiet = new MoveList();
+
+        Move pvMove = Move.nullMove();
+        TTEntry ttEntry = TranspTable.get(board.hash());
+        if (ttEntry != null) {
+            pvMove = ttEntry.move();
+        }
         for (Move move : moves){
-            switch (move.flags()) {
-                case Move.PC_BISHOP, Move.PC_KNIGHT, Move.PC_ROOK, Move.PC_QUEEN, Move.PR_BISHOP, Move.PR_KNIGHT, Move.PR_ROOK, Move.PR_QUEEN -> promotions.add(move);
-                case Move.CAPTURE -> captures.add(move);
-                case Move.QUIET, Move.EN_PASSANT, Move.DOUBLE_PUSH, Move.OO, Move.OOO -> quiet.add(move);
+            if (move.equals(pvMove)) {
+               sortedMoves.add(move);
+            }
+            else {
+                switch (move.flags()) {
+                    case Move.PC_BISHOP, Move.PC_KNIGHT, Move.PC_ROOK, Move.PC_QUEEN, Move.PR_BISHOP, Move.PR_KNIGHT, Move.PR_ROOK, Move.PR_QUEEN -> promotions.add(move);
+                    case Move.CAPTURE -> captures.add(move);
+                    case Move.QUIET, Move.EN_PASSANT, Move.DOUBLE_PUSH, Move.OO, Move.OOO -> quiet.add(move);
+                }
             }
         }
 
         Comparator<Move> compareByMvvLva = (Move move1, Move move2) -> Integer.compare(getMvvLvaScore(board, move2), getMvvLvaScore(board, move1));
         captures.sort(compareByMvvLva);
-        MoveList sortedMoves = new MoveList();
+
         sortedMoves.addAll(captures);
         sortedMoves.addAll(promotions);
         sortedMoves.addAll(quiet);

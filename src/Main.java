@@ -18,6 +18,8 @@ public class Main {
     private final static String QUIT = "quit";
     private final static String UCINEWGAME = "ucinewgame";
 
+
+
     public static void main(String[] args) throws IOException {
 
         FileWriter fr = new FileWriter("./uciCommands.txt", true);
@@ -74,13 +76,17 @@ public class Main {
                 if (bincIndex != -1)
                     Limits.increment[Side.BLACK] = Long.parseLong(command[bincIndex + 1]);
 
+                long startTime = System.currentTimeMillis();
                 searcher.itDeep(board);
+                long endTime = System.currentTimeMillis();
                 Move best_move = searcher.IDMove;
                 int best_value = searcher.IDScore;
 
                 System.out.println("info score cp " + best_value);
                 System.out.println("bestmove " + best_move.uci());
-//                TranspTable.reset();
+                System.out.println((endTime - startTime)/1000.0);
+                TranspTable.reset();
+                System.gc();
             }
             bw.flush();
         }

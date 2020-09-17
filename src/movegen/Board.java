@@ -15,6 +15,11 @@ public class Board {
         setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     }
 
+    public Board(boolean clear){
+        if (!clear)
+            setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    }
+
     public void clear(){
         side_to_play = Side.WHITE;
         game_ply = 0;

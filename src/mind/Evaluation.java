@@ -11,6 +11,8 @@ public class Evaluation {
     final static int TOTAL_PHASE = 20;
     final static int[] PIECE_PHASES = {0, 1, 1, 2, 4};
 
+    final static Score TEMPO = new Score(20, 10);
+
     public final static Score[] PIECE_TYPE_VALUES = {
             new Score(100, 110), // PAWN
             new Score(320, 320), // KNIGHT
@@ -143,6 +145,15 @@ public class Evaluation {
         return Bitboard.popcount(ourPawns & ~fill);
     }
 
+    public static Score pawnStructure(Board board, int side){
+        Score pawnScore = new Score();
+        pawnScore.add(PASSED_PAWN_VALUE, passedPawns(board, side));
+        pawnScore.add(DOUBLED_PAWN_PENALTY, doubledPawns(board.bitboardOf(side, PieceType.PAWN)));
+        pawnScore.add(ISOLATED_PAWN_PENALTY, isolatedPawns(board.bitboardOf(side, PieceType.PAWN)));
+
+        return pawnScore;
+    }
+
     public static int pawnsShieldingKing(final Board board, int side){
         int kingSq = side == Side.WHITE ? whiteKingSq : blackKingSq;
         long pawns = board.bitboardOf(side, PieceType.PAWN);
@@ -160,21 +171,15 @@ public class Evaluation {
         initEval(board);
 
         // EVALUATE PAWN STRUCTURE
-        int passedPawnDiff = passedPawns(board, Side.WHITE) - passedPawns(board, Side.BLACK);
-        score.add(PASSED_PAWN_VALUE, passedPawnDiff);
+        score.add(pawnStructure(board, Side.WHITE));
+        score.sub(pawnStructure(board, Side.BLACK));
 
-        int doubledPawnDiff = doubledPawns(board.bitboardOf(Piece.WHITE_PAWN)) - doubledPawns(board.bitboardOf(Piece.BLACK_PAWN));
-        score.add(DOUBLED_PAWN_PENALTY, doubledPawnDiff);
-
-        int isolatedPawnDiff = isolatedPawns(board.bitboardOf(Piece.WHITE_PAWN)) - isolatedPawns(board.bitboardOf(Piece.BLACK_PAWN));
-        score.add(ISOLATED_PAWN_PENALTY, isolatedPawnDiff);
-
-        if (hasBishopPair(Piece.WHITE_BISHOP)){
+        if (hasBishopPair(Piece.WHITE_BISHOP))
             score.add(BISHOP_PAIR_VALUE);
-        }
-        if (hasBishopPair(Piece.BLACK_BISHOP)){
+
+        if (hasBishopPair(Piece.BLACK_BISHOP))
             score.sub(BISHOP_PAIR_VALUE);
-        }
+
 
         //EVALUATE KING POSITION
         int pawnShieldDiff = pawnsShieldingKing(board, Side.WHITE)

@@ -48,6 +48,12 @@ public class Move {
         return new Move(Square.NO_SQUARE, Square.NO_SQUARE, Move.NULL);
     }
 
+    @Override
+    public boolean equals(Object other){
+        if (other != null && getClass() == other.getClass())
+            return this.move == ((Move)other).move();
+        return false;
+    }
 
     public String uci(){
         String promo = switch (this.flags()) {

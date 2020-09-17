@@ -1,14 +1,14 @@
 package mind;
-
-import movegen.Side;
+import movegen.*;
 
 public class Limits {
     public static long[] time = {Long.MAX_VALUE, Long.MAX_VALUE};
     public static long[] increment = {0, 0};
     public static long timeAllocated = Long.MAX_VALUE;
-    public static int limitCheckCount = 4096;
-    public static int overhead = 100;
     public static long startTime;
+    public static int limitCheckCount = 4096;
+
+    public final static int overhead = 100;
 
     public static boolean checkLimits(){
         if (--limitCheckCount > 0)
@@ -17,7 +17,7 @@ public class Limits {
         limitCheckCount = 4096;
 
         long elapsed = System.currentTimeMillis() - startTime;
-        return elapsed >= Limits.timeAllocated;
+        return elapsed >= timeAllocated;
     }
 
     public static void calcTime(int activeSide, int game_ply){

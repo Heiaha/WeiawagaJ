@@ -7,7 +7,7 @@ public class UndoInfo {
     public int move;
     public long hash;
     public int halfmoveCounter;
-
+    public int pilesFromNull;
     public UndoInfo(){
         entry = 0;
         captured = Piece.NONE;
@@ -15,5 +15,6 @@ public class UndoInfo {
         move = 0;
         hash = 0;
         halfmoveCounter = 0;
+        pilesFromNull = 0;
     }
 }

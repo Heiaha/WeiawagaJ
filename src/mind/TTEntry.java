@@ -1,4 +1,3 @@
-/// unfinished, for future use.
 
 
 package mind;

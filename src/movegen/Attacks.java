@@ -151,6 +151,7 @@ public class Attacks {
     final static long[] ROOK_ATTACK_MASKS = new long[64];
     final static long[][] ROOK_ATTACKS = new long[64][4096];
 
+    //initialize rook magics
     static{
         long edges, subset, index;
 
