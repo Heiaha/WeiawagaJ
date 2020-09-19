@@ -246,6 +246,17 @@ public class Bitboard {
         return fill(bb, Square.NORTH) | fill(bb, Square.SOUTH);
     }
 
+    public static void printBitboard(long bb){
+        System.out.println();
+        for (int i = 56; i >= 0; i -= 8){
+            for (int j = 0; j < 8; j++){
+                System.out.print((((bb >>> (i + j)) & 1)) + " ");
+            }
+            System.out.println();
+        }
+        System.out.println();
+    }
+
 
 
 

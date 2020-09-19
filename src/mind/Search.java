@@ -2,7 +2,7 @@ package mind;
 import movegen.*;
 
 public class Search {
-    final public static int MAX_SEARCH_DEPTH = 9;
+    final public static int MAX_SEARCH_DEPTH = 12;
     final public static int INF = 99999;
     public static boolean stop;
     public Move IDMove = null;
@@ -108,7 +108,6 @@ public class Search {
         if (moves.size() == 0)
             return checkExtension == 1 ? -INF - depth : 0;
 
-
         int value;
         Move bestMove = null;
         moves = MoveOrder.moveOrdering(board, moves);
@@ -168,8 +167,4 @@ public class Search {
         }
         return alpha;
     }
-
-
-
-
 }

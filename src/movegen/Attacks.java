@@ -244,6 +244,9 @@ public class Attacks {
         return PAWN_ATTACKS[side][square];
     }
 
+    // Sliding attacks from a given square & axis taking into account blocking pieces.
+    // Uses hyperbola quintessence
+    // https://www.chessprogramming.org/Hyperbola_Quintessence#:~:text=Hyperbola%20Quintessence%20applies%20the%20o,flip%20aka%20x86%2D64%20bswap%20.
     public static long slidingAttacks(int square, long occ, long mask){
         return (((mask & occ) - Square.getBb(square) * 2) ^
                 Bitboard.reverse(Bitboard.reverse(mask & occ) - Bitboard.reverse(Square.getBb(square)) * 2)) & mask;

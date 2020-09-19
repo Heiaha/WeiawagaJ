@@ -84,7 +84,6 @@ public class Main {
 
                 System.out.println("info score cp " + best_value);
                 System.out.println("bestmove " + best_move.uci());
-                System.out.println((endTime - startTime)/1000.0);
                 TranspTable.reset();
                 System.gc();
             }
@@ -117,7 +116,7 @@ public class Main {
         return -1;
     }
 
-    private static long print_perft(Board board, int depth) {
+    private static long printPerft(Board board, int depth) {
         final long start_time = System.currentTimeMillis();
         long nodes = 0;
         MoveList moves = board.generateLegalMoves();

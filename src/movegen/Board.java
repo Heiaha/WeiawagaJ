@@ -323,8 +323,10 @@ public class Board {
         final long ourOrthSliders = orthogonalSliders(us);
         final long theirOrthSliders = orthogonalSliders(them);
 
+        // General purpose to keep down initialized primitives
         long b1, b2, b3;
 
+        // Squares that the king can't move to
         long danger = 0;
         danger |= Attacks.pawnAttacks(bitboardOf(them, PieceType.PAWN), them) | Attacks.getKingAttacks(theirKing);
 
@@ -352,7 +354,10 @@ public class Board {
         moves.makeQ(ourKing, b1 & ~themBb);
         moves.makeC(ourKing, b1 & themBb);
 
-        long captureMask, quietMask;
+        //captureMask contains destinations where there is an enemy piece that is checking the king and must be captured
+        //quietMask contains squares where pieces must be moved to block an incoming attack on the king
+        long captureMask;
+        long quietMask;
         int s;
 
         checkers = (Attacks.getKnightAttacks(ourKing) & bitboardOf(them, PieceType.KNIGHT))
@@ -867,7 +872,7 @@ public class Board {
             history[0].entry |= 0x0100000000000000L;
 
         if (flags.length >= 3){
-            String s = flags[2].toUpperCase().trim();
+            String s = flags[2].toLowerCase().trim();
             if (!s.equals("-")){
                 history[game_ply].epsq = Square.getSquareFromName(s);
             }
@@ -968,8 +973,10 @@ public class Board {
             else if (typeStr.equals("r"))
                 move = new Move(fromSq, toSq, Move.PR_ROOK);
             else if ( Piece.typeOf(board[fromSq]) == PieceType.PAWN &&
-                    board[toSq] == history[game_ply].epsq)
+                    toSq == history[game_ply].epsq) {
                 move = new Move(fromSq, toSq, Move.EN_PASSANT);
+                System.out.println("ep");
+            }
             else if (Piece.typeOf(board[fromSq]) == PieceType.PAWN && Math.abs(fromSq - toSq) == 16)
                 move = new Move(fromSq, toSq, Move.DOUBLE_PUSH);
             else if (Piece.typeOf(board[fromSq]) == PieceType.KING && Square.getFile(fromSq) == File.FILE_E && Square.getFile(toSq) == File.FILE_G)
@@ -979,6 +986,7 @@ public class Board {
             else
                 move = new Move(fromSq, toSq, Move.QUIET);
         }
+
         this.push(move);
     }
 
