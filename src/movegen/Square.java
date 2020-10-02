@@ -31,7 +31,7 @@ public class Square {
     public final static int NORTH = 8, SOUTH = -8, EAST = 1, WEST = -1, NORTH_EAST = NORTH + EAST, NORTH_WEST = NORTH + WEST,
             SOUTH_WEST = SOUTH + WEST, SOUTH_EAST = SOUTH + EAST, NORTH_NORTH = NORTH + NORTH, SOUTH_SOUTH = SOUTH + SOUTH;
 
-    public final static long BB_SQUARES[] = new long[65];
+    public final static long[] BB_SQUARES = new long[65];
     static {
         for (int sq = A1; sq <= H8; sq++){
             BB_SQUARES[sq] = 1L << sq;
@@ -39,21 +39,21 @@ public class Square {
         BB_SQUARES[64] = 0L;
     }
 
-    public final static Map<String, Integer> NAME_MAP = new HashMap<String, Integer>();
+    public final static Map<String, Integer> NAME_MAP = new HashMap<>();
     static{
         for (int sq = Square.A1; sq <= Square.H8; sq++)
             NAME_MAP.put(SQUARE_NAMES[sq], sq);
     }
 
-    private final static int SQ_MIRROR[] = new int[64];
+    private final static int[] SQ_MIRROR = new int[64];
     static{
         for (int sq = A1; sq <= H8; sq++){
             SQ_MIRROR[sq] = sq ^ 0x38;
         }
     }
 
-    public final static int CDISTANCE[][] = new int[64][64];
-    public final static int MDISTANCE[][] = new int[64][64];
+    public final static int[][] CDISTANCE = new int[64][64];
+    public final static int[][] MDISTANCE = new int[64][64];
     static{
         for (int sq1 = Square.A1; sq1 <= Square.H8; sq1++){
             for (int sq2 = Square.A1; sq2 <= Square.H8; sq2++){
@@ -67,18 +67,18 @@ public class Square {
         return NAME_MAP.get(st);
     }
 
-    public static int encode(int rank, int file) { return rank * 8 + file; }
+    public static int encode(int rank, int file) { return (rank << 3) + file; }
 
     public static long getBb(int square){
         return BB_SQUARES[square];
     }
 
     public static int getRank(int square){
-        return square / 8;
+        return square >>> 3;
     }
 
     public static int getFile(int square){
-        return square % 8;
+        return square & 7;
     }
 
     public static long getFileBb(int square){

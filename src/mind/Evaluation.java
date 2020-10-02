@@ -8,34 +8,37 @@ public class Evaluation {
     public static long allBlackPieces;
     public static long allPieces;
 
-    final static int TOTAL_PHASE = 20;
+    final static int TOTAL_PHASE = 24;
     final static int[] PIECE_PHASES = {0, 1, 1, 2, 4};
 
     final static Score TEMPO = new Score(20, 10);
 
     public final static Score[] PIECE_TYPE_VALUES = {
-            new Score(100, 110), // PAWN
-            new Score(320, 320), // KNIGHT
-            new Score(330, 330), // BISHOP
+            new Score(70, 90), // PAWN
+            new Score(325, 325), // KNIGHT
+            new Score(325, 325), // BISHOP
             new Score(500, 500), // ROOK
-            new Score(900, 900)  // QUEEN
+            new Score(975, 975)  // QUEEN
     };
 
     //pawn scoring
-    final static Score PASSED_PAWN_VALUE = new Score(10, 70);
-    final static Score DOUBLED_PAWN_PENALTY = new Score(-20, -30);
-    final static Score ISOLATED_PAWN_PENALTY = new Score(-15, -30);
+    final static Score PASSED_PAWN_VALUE = new Score(10, 50);
+    final static Score DOUBLED_PAWN_PENALTY = new Score(-20, -10);
+    final static Score ISOLATED_PAWN_PENALTY = new Score(-20, -10);
 
     //king scoring
     final static Score KING_PAWN_SHIELD_BONUS = new Score(10, 0);
 
     //rook scoring
-    final static Score KING_TRAPPING_ROOK_PENALTY = new Score(-50, 0);
+    final static Score KING_TRAPPING_ROOK_PENALTY = new Score(-25, 0);
 
     //bishop scoring
     final static Score BISHOP_SAME_COLOR_PAWN_PENALTY = new Score(-3, -7); // per pawn
     final static Score BISHOP_ATTACKS_CENTER = new Score(30, 40);
     final static Score BISHOP_PAIR_VALUE = new Score(45, 55);
+
+    //mobility
+    final static Score MOBILITY_BONUS = new Score(4, 1);
 
     public final static Score[][] PIECE_TABLES = {
         {
@@ -150,7 +153,6 @@ public class Evaluation {
         pawnScore.add(PASSED_PAWN_VALUE, passedPawns(board, side));
         pawnScore.add(DOUBLED_PAWN_PENALTY, doubledPawns(board.bitboardOf(side, PieceType.PAWN)));
         pawnScore.add(ISOLATED_PAWN_PENALTY, isolatedPawns(board.bitboardOf(side, PieceType.PAWN)));
-
         return pawnScore;
     }
 
@@ -164,11 +166,27 @@ public class Evaluation {
         return Bitboard.popcount(board.bitboardOf(side, PieceType.PAWN) & ((Bitboard.DARK_SQUARES & Square.getBb(square)) != 0 ? Bitboard.DARK_SQUARES : Bitboard.LIGHT_SQUARES));
     }
 
+    public static int mobilityofPiece(int sq, int pieceType, int side){
+        long ourPieces = side == Side.WHITE ? allWhitePieces : allBlackPieces;
+        return switch (pieceType) {
+            case PieceType.BISHOP -> Bitboard.popcount(Attacks.getBishopAttacks(sq, allPieces) & ~ourPieces);
+            case PieceType.KNIGHT -> Bitboard.popcount(Attacks.getKnightAttacks(sq) & ~ourPieces);
+            case PieceType.ROOK -> Bitboard.popcount(Attacks.getRookAttacks(sq, allPieces) & ~ourPieces);
+            case PieceType.QUEEN -> Bitboard.popcount((Attacks.getRookAttacks(sq, allPieces) | Attacks.getBishopAttacks(sq, allPieces)) & ~ourPieces);
+            default -> 0;
+        };
+    }
+
     public static int evaluateState(final Board board){
         Score score = new Score();
         int phase = TOTAL_PHASE;
         int sq;
         initEval(board);
+
+        if (board.getSideToPlay() == Side.WHITE)
+            score.add(TEMPO);
+        else
+            score.sub(TEMPO);
 
         // EVALUATE PAWN STRUCTURE
         score.add(pawnStructure(board, Side.WHITE));
@@ -191,6 +209,7 @@ public class Evaluation {
 
         long whitePieces;
         long blackPieces;
+        int mobility;
         for (int pieceType = PieceType.PAWN; pieceType <= PieceType.QUEEN; pieceType++){
             whitePieces = board.bitboardOf(Side.WHITE, pieceType);
             blackPieces = board.bitboardOf(Side.BLACK, pieceType);
@@ -202,8 +221,8 @@ public class Evaluation {
                 sq = Bitboard.lsb(whitePieces);
                 whitePieces = Bitboard.extractLsb(whitePieces);
                 score.add(PIECE_TABLES[pieceType][sq]);
-
-                // make sure the rook isn't trapped by the king.
+                mobility = mobilityofPiece(sq, pieceType, Side.WHITE);
+                score.add(MOBILITY_BONUS, mobility);
                 switch (pieceType) {
                     case PieceType.BISHOP -> {
                         score.add(BISHOP_SAME_COLOR_PAWN_PENALTY, pawnsOnSameColorSquare(board, sq, Side.WHITE));
@@ -211,7 +230,7 @@ public class Evaluation {
                             score.add(BISHOP_ATTACKS_CENTER);
                     }
                     case PieceType.ROOK -> {
-                        int mobility = Bitboard.popcount(Attacks.getRookAttacks(sq, allPieces));
+                        // make sure the rook isn't trapped by the king.
                         if (mobility <= 3) {
                             int kf = Square.getFile(whiteKingSq);
                             if ((kf < File.FILE_E) == (Square.getFile(sq) < kf))
@@ -225,8 +244,8 @@ public class Evaluation {
                 sq = Bitboard.lsb(blackPieces);
                 blackPieces = Bitboard.extractLsb(blackPieces);
                 score.sub(PIECE_TABLES[pieceType][Square.squareMirror(sq)]);
-
-                // make sure the rook isn't trapped by the king.
+                mobility = mobilityofPiece(sq, pieceType, Side.BLACK);
+                score.sub(MOBILITY_BONUS, mobility);
                 switch (pieceType) {
                     case PieceType.BISHOP -> {
                         score.sub(BISHOP_SAME_COLOR_PAWN_PENALTY, pawnsOnSameColorSquare(board, sq, Side.BLACK));
@@ -234,7 +253,7 @@ public class Evaluation {
                             score.sub(BISHOP_ATTACKS_CENTER);
                     }
                     case PieceType.ROOK -> {
-                        int mobility = Bitboard.popcount(Attacks.getRookAttacks(sq, allPieces));
+                        // make sure the rook isn't trapped by the king.
                         if (mobility <= 3) {
                             int kf = Square.getFile(blackKingSq);
                             if ((kf < File.FILE_E) == (Square.getFile(sq) < kf))

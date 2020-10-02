@@ -21,10 +21,11 @@ public class Limits {
     }
 
     public static void calcTime(int activeSide, int game_ply){
+        if (timeAllocated != Long.MAX_VALUE)
+            return;
         long ourTime = time[activeSide];
         long theirTime = time[Side.flip(activeSide)];
         if (ourTime == Long.MAX_VALUE) {
-            timeAllocated = Long.MAX_VALUE;
             return;
         }
 
@@ -35,6 +36,14 @@ public class Limits {
         float phaseFactor = phaseFactor(game_ply);
 
         timeAllocated = (long)(ourTime*timeRatio*phaseFactor/30.0 + increment[activeSide] - overhead);
+    }
+
+    public static void resetTime(){
+        time[Side.WHITE] = Long.MAX_VALUE;
+        time[Side.BLACK] = Long.MAX_VALUE;
+        increment[Side.WHITE] = 0;
+        increment[Side.BLACK] = 0;
+        timeAllocated = Long.MAX_VALUE;
     }
 
     public static float phaseFactor(int ply){

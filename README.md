@@ -20,6 +20,7 @@ A UCI chess engine written in Java
     - [King safety](https://www.chessprogramming.org/King_Safety)
     - [Bishop pairs](https://www.chessprogramming.org/Bishop_Pair)
     - [Evaluation tapering](https://www.chessprogramming.org/Tapered_Eval)
+    - [Mobility](https://www.chessprogramming.org/Mobility)
   - Move ordering
     - [Hash move](https://www.chessprogramming.org/Hash_Move)
     - [MVV/LVA](https://www.chessprogramming.org/MVV-LVA)

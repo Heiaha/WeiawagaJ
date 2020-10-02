@@ -262,5 +262,4 @@ public class Attacks {
             default -> 0L;
         };
     }
-
 }

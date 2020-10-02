@@ -337,7 +337,7 @@ public class Board {
         }
 
         b1 = theirDiagSliders;
-        while(b1 != 0){
+        while (b1 != 0){
             danger |= Attacks.getBishopAttacks(Bitboard.lsb(b1), all ^ Square.getBb(ourKing));
             b1 = Bitboard.extractLsb(b1);
         }
@@ -973,10 +973,8 @@ public class Board {
             else if (typeStr.equals("r"))
                 move = new Move(fromSq, toSq, Move.PR_ROOK);
             else if ( Piece.typeOf(board[fromSq]) == PieceType.PAWN &&
-                    toSq == history[game_ply].epsq) {
+                    toSq == history[game_ply].epsq)
                 move = new Move(fromSq, toSq, Move.EN_PASSANT);
-                System.out.println("ep");
-            }
             else if (Piece.typeOf(board[fromSq]) == PieceType.PAWN && Math.abs(fromSq - toSq) == 16)
                 move = new Move(fromSq, toSq, Move.DOUBLE_PUSH);
             else if (Piece.typeOf(board[fromSq]) == PieceType.KING && Square.getFile(fromSq) == File.FILE_E && Square.getFile(toSq) == File.FILE_G)

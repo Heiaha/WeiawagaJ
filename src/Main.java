@@ -17,6 +17,7 @@ public class Main {
     private final static String STOP = "stop";
     private final static String QUIT = "quit";
     private final static String UCINEWGAME = "ucinewgame";
+    private final static String POSITIONFEN = "position fen";
 
 
 
@@ -27,12 +28,14 @@ public class Main {
         Scanner input_stream = new Scanner(System.in);
         Search searcher = new Search();
         Board board = new Board();
-
         while (true){
             String input = input_stream.nextLine();
             bw.write(input + "\n");
             if (input.equals(QUIT)){
                 System.exit(0);
+            }
+            else if (input.equals(UCINEWGAME)){
+                board = new Board();
             }
             else if (input.equals(UCI)){
                 board = new Board();
@@ -61,8 +64,16 @@ public class Main {
                     board.pushFromString(move_string);
                 }
             }
+            else if (input.startsWith(POSITIONFEN)){
+                String fenString = input.replace(POSITIONFEN, "");
+                fenString = fenString.trim();
+                board.setFen(fenString);
+            }
             else if (input.startsWith(GOTHINK)){
                 String[] command = input.split(" ");
+                int moveTimeIndex = linearSearch(command, "movetime");
+                if (moveTimeIndex != -1)
+                    Limits.timeAllocated = Long.parseLong(command[moveTimeIndex + 1]);
                 int wtimeIndex = linearSearch(command, "wtime");
                 if (wtimeIndex != -1)
                     Limits.time[Side.WHITE] = Long.parseLong(command[wtimeIndex + 1]);
@@ -76,36 +87,20 @@ public class Main {
                 if (bincIndex != -1)
                     Limits.increment[Side.BLACK] = Long.parseLong(command[bincIndex + 1]);
 
-                long startTime = System.currentTimeMillis();
                 searcher.itDeep(board);
-                long endTime = System.currentTimeMillis();
                 Move best_move = searcher.IDMove;
                 int best_value = searcher.IDScore;
 
                 System.out.println("info score cp " + best_value);
                 System.out.println("bestmove " + best_move.uci());
+
                 TranspTable.reset();
                 System.gc();
+                Limits.resetTime();
             }
             bw.flush();
         }
 
-    }
-
-    public static void printMoves(Board board, int depth){
-        int alpha = -Search.INF;
-        int beta = Search.INF;
-        Search searcher = new Search();
-        int score;
-        for (Move move : board.generateLegalMoves()){
-            board.push(move);
-            score = -searcher.negamax(board, depth, -beta, -alpha);
-            board.pop();
-            if (move.flags() == Move.OO || move.flags() == Move.OOO)
-                System.out.print("Castling ");
-            System.out.print(move.uci() + " ");
-            System.out.println(score);
-        }
     }
 
     public static int linearSearch(Object[] arr, Object val){
@@ -142,7 +137,6 @@ public class Main {
             return moves.size();
         }
         long nodes = 0;
-
         for (Move move : moves) {
             board.push(move);
             nodes += perft(board, depth - 1);

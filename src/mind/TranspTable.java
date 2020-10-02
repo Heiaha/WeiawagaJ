@@ -10,7 +10,6 @@ public class TranspTable {
 
     public static void set(long key_, int score_, int depth_, int flag_, Move bestMove_){
         table.put(key_, new TTEntry(key_, score_, depth_, flag_, bestMove_));
-
     }
 
     public static TTEntry get(long key_){

@@ -5,6 +5,7 @@ import java.util.Comparator;
 
 
 public class MoveOrder {
+
     private static final int[][] MvvLvaScores = new int[6][6];
     static {
         final int[] VictimScore = {100, 200, 300, 400, 500, 600};
@@ -30,6 +31,7 @@ public class MoveOrder {
         if (ttEntry != null) {
             pvMove = ttEntry.move();
         }
+
         for (Move move : moves){
             if (move.equals(pvMove)) {
                sortedMoves.add(move);

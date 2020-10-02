@@ -7,7 +7,6 @@ public class Search {
     public static boolean stop;
     public Move IDMove = null;
     public int IDScore = -INF;
-    public static int nodes = 0;
 
     public Search(){}
 
@@ -26,10 +25,10 @@ public class Search {
             System.out.print(" currmove " + IDMove.uci());
             System.out.print(" depth " + depth);
             System.out.print(" score cp " + IDScore);
-            System.out.println(" nodes " + nodes);
-            nodes = 0;
+            System.out.println(" nodes " + Statistics.totalNodes());
+            Statistics.reset();
             long elapsed = System.currentTimeMillis() - Limits.startTime;
-            if (elapsed >= Limits.timeAllocated/2)
+            if (elapsed >= Limits.timeAllocated/2 || isScoreCheckmate(IDScore))
                 break;
         }
     }
@@ -72,17 +71,20 @@ public class Search {
     public int negamax(Board board, int depth, int alpha, int beta){
         if (stop || Limits.checkLimits()) {
             stop = true;
-            return INF;
+            return 0;
         }
 
-        if (board.isThreefoldOrFiftyMove())
+        Statistics.nodes++;
+        if (board.isThreefoldOrFiftyMove()) {
+            Statistics.leafs++;
             return 0;
+        }
 
         // check to see if the board state has already been encountered
-
         int alphaOrig = alpha;
         final TTEntry ttEntry = TranspTable.get(board.hash());
         if (ttEntry != null && ttEntry.depth() >= depth) {
+            Statistics.ttHits++;
             switch (ttEntry.flag()) {
                 case TTEntry.EXACT:
                     return ttEntry.score();
@@ -93,20 +95,26 @@ public class Search {
                     alpha = Math.max(alpha, ttEntry.score());
                     break;
             }
-            if (alpha >= beta)
+            if (alpha >= beta) {
+                Statistics.leafs++;
                 return ttEntry.score();
+            }
         }
 
         // check if King is attacked. If so, we may be in checkmate. If we're not in checkmate, extend the
         // search depth by 1. We use checkExtension to see if we're in checkmate or stalemate.
         int checkExtension = board.kingAttacked() ? 1 : 0;
-        if (depth + checkExtension <= 0)
+        if (depth + checkExtension <= 0) {
+            Statistics.leafs++;
             return qSearch(board, alpha, beta, depth);
+        }
 
         // look for checkmate. If only in check, this will simply generate the moves.
         MoveList moves = board.generateLegalMoves();
-        if (moves.size() == 0)
+        if (moves.size() == 0) {
+            Statistics.leafs++;
             return checkExtension == 1 ? -INF - depth : 0;
+        }
 
         int value;
         Move bestMove = null;
@@ -117,6 +125,7 @@ public class Search {
             board.pop();
             if (value >= beta){
                 TranspTable.set(board.hash(), value, depth, TTEntry.LOWER_BOUND, move);
+                Statistics.betaCutoffs++;
                 return beta;
             }
             if (value > alpha) {
@@ -124,7 +133,6 @@ public class Search {
                 alpha = value;
             }
         }
-
 
         if (bestMove != null){
             int flag;
@@ -138,18 +146,22 @@ public class Search {
     }
 
     public int qSearch(Board board, int alpha, int beta, int depth){
-        nodes++;
+        Statistics.qnodes++;
         if (stop || Limits.checkLimits()){
             stop = true;
             return 0;
         }
 
-        if (board.kingAttacked() && board.generateLegalMoves().size() == 0)
+        if (board.kingAttacked() && board.generateLegalMoves().size() == 0) {
+            Statistics.qleafs++;
             return -INF - depth;
+        }
 
         int standPat = Evaluation.evaluateState(board);
-        if (standPat >= beta)
+        if (standPat >= beta) {
+            Statistics.qleafs++;
             return beta;
+        }
         if (alpha < standPat)
             alpha = standPat;
 
@@ -160,11 +172,18 @@ public class Search {
             board.push(move);
             value = -qSearch(board, -beta, -alpha, depth - 1);
             board.pop();
-            if (value >= beta)
+            if (value >= beta) {
+                Statistics.qbetaCutoffs++;
                 return beta;
+            }
             if (value > alpha)
                 alpha = value;
         }
         return alpha;
     }
+
+    public static boolean isScoreCheckmate(int score){
+        return Math.abs(score) >= INF;
+    }
+
 }
