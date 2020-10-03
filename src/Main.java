@@ -26,7 +26,6 @@ public class Main {
         FileWriter fr = new FileWriter("./uciCommands.txt", true);
         BufferedWriter bw = new BufferedWriter(fr);
         Scanner input_stream = new Scanner(System.in);
-        Search searcher = new Search();
         Board board = new Board();
         while (true){
             String input = input_stream.nextLine();
@@ -87,9 +86,9 @@ public class Main {
                 if (bincIndex != -1)
                     Limits.increment[Side.BLACK] = Long.parseLong(command[bincIndex + 1]);
 
-                searcher.itDeep(board);
-                Move best_move = searcher.IDMove;
-                int best_value = searcher.IDScore;
+                Search.itDeep(board);
+                Move best_move = Search.IDMove;
+                int best_value = Search.IDScore;
 
                 System.out.println("info score cp " + best_value);
                 System.out.println("bestmove " + best_move.uci());
