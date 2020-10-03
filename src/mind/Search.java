@@ -5,12 +5,12 @@ public class Search {
     final public static int MAX_SEARCH_DEPTH = 12;
     final public static int INF = 99999;
     public static boolean stop;
-    public Move IDMove = null;
-    public int IDScore = -INF;
+    public static Move IDMove = null;
+    public static int IDScore = -INF;
 
     public Search(){}
 
-    public void itDeep(Board board){
+    public static void itDeep(Board board){
         Limits.calcTime(board.getSideToPlay(), board.game_ply);
         Limits.startTime = System.currentTimeMillis();
         int searchDepth = MAX_SEARCH_DEPTH;
@@ -33,7 +33,7 @@ public class Search {
         }
     }
 
-    public void negaMaxRoot(Board board, int depth){
+    public static void negaMaxRoot(Board board, int depth){
         int alpha = -INF;
         int beta = INF;
         MoveList moves = board.generateLegalMoves();
@@ -68,7 +68,7 @@ public class Search {
         }
     }
 
-    public int negamax(Board board, int depth, int alpha, int beta){
+    public static int negamax(Board board, int depth, int alpha, int beta){
         if (stop || Limits.checkLimits()) {
             stop = true;
             return 0;
@@ -145,7 +145,7 @@ public class Search {
         return alpha;
     }
 
-    public int qSearch(Board board, int alpha, int beta, int depth){
+    public static int qSearch(Board board, int alpha, int beta, int depth){
         Statistics.qnodes++;
         if (stop || Limits.checkLimits()){
             stop = true;
