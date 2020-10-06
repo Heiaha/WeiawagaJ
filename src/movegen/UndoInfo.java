@@ -6,8 +6,9 @@ public class UndoInfo {
     public int epsq;
     public int move;
     public long hash;
+    public long materialHash;
     public int halfmoveCounter;
-    public int pilesFromNull;
+    public int pliesFromNull;
     public UndoInfo(){
         entry = 0;
         captured = Piece.NONE;
@@ -15,6 +16,6 @@ public class UndoInfo {
         move = 0;
         hash = 0;
         halfmoveCounter = 0;
-        pilesFromNull = 0;
+        pliesFromNull = 0;
     }
 }

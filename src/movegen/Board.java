@@ -1,15 +1,16 @@
 package movegen;
 
 public class Board {
-    private long[] piece_bb = new long[Piece.NPIECES]; //bitboards
-    private int[] board = new int[64]; // board of pieces
+    private final long[] piece_bb = new long[Piece.NPIECES]; //bitboards
+    private final int[] board = new int[64]; // board of pieces
     private int side_to_play;
     private long hash;
+    private long materialHash;
     public int game_ply;
     public UndoInfo[] history = new UndoInfo[1000];
 
-    public long checkers;
-    public long pinned;
+    private long checkers;
+    private long pinned;
 
     public Board(){
         setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
@@ -30,7 +31,6 @@ public class Board {
             board[sq] = Piece.NONE;
     }
 
-
     public int pieceAt(int square){
         return board[square];
     }
@@ -43,16 +43,20 @@ public class Board {
         board[square] = piece;
         piece_bb[piece] |= Square.getBb(square);
         hash ^= Zobrist.ZOBRIST_TABLE[piece][square];
+        materialHash ^= Zobrist.ZOBRIST_TABLE[piece][square];
     }
 
     public void removePiece(int square){
         hash ^= Zobrist.ZOBRIST_TABLE[board[square]][square];
+        materialHash ^= Zobrist.ZOBRIST_TABLE[board[square]][square];
         piece_bb[board[square]] &= ~Square.getBb(square);
         board[square] = Piece.NONE;
     }
 
     public void movePiece(int fromSq, int toSq){
         hash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq] ^
+                Zobrist.ZOBRIST_TABLE[board[toSq]][toSq];
+        materialHash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq] ^
                 Zobrist.ZOBRIST_TABLE[board[toSq]][toSq];
         long mask = Square.getBb(fromSq) | Square.getBb(toSq);
         piece_bb[board[fromSq]] ^= mask;
@@ -63,6 +67,7 @@ public class Board {
 
     public void movePieceQuiet(int fromSq, int toSq){
         hash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq];
+        materialHash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq];
         piece_bb[board[fromSq]] ^= (Square.getBb(fromSq) | Square.getBb(toSq));
         board[toSq] = board[fromSq];
         board[fromSq] = Piece.NONE;
@@ -72,12 +77,20 @@ public class Board {
         return hash;
     }
 
+    public long materialHash(){
+        return materialHash;
+    }
+
     public long bitboardOf(int piece){
         return piece_bb[piece];
     }
 
     public long bitboardOf(int side, int pieceType){
         return piece_bb[Piece.makePiece(side, pieceType)];
+    }
+
+    public long checkers(){
+        return checkers;
     }
 
     public long diagonalSliders(int side){
@@ -112,6 +125,28 @@ public class Board {
                 (Attacks.getRookAttacks(square, occ) & (piece_bb[Piece.BLACK_ROOK] | piece_bb[Piece.BLACK_QUEEN]));
     }
 
+    public void pushNull(){
+        game_ply++;
+        history[game_ply] = new UndoInfo();
+        history[game_ply].entry = history[game_ply - 1].entry;
+        history[game_ply].halfmoveCounter = history[game_ply].halfmoveCounter + 1;
+        history[game_ply].pliesFromNull = 0;
+        history[game_ply].hash = history[game_ply - 1].hash;
+        history[game_ply].materialHash = history[game_ply - 1].materialHash;
+        if (history[game_ply - 1].epsq != Square.NO_SQUARE)
+            hash ^= Zobrist.EN_PASSANT[Square.getFile(history[game_ply - 1].epsq)];
+        hash ^= Zobrist.SIDE;
+        side_to_play = Side.flip(side_to_play);
+    }
+
+    public void popNull(){
+        game_ply--;
+        hash ^= Zobrist.SIDE;
+        if (history[game_ply].epsq != Square.NO_SQUARE)
+            hash ^= Zobrist.EN_PASSANT[Square.getFile(history[game_ply].epsq)];
+        side_to_play = Side.flip(side_to_play);
+    }
+
     public void push(Move m) {
         game_ply++;
         history[game_ply] = new UndoInfo();
@@ -119,6 +154,7 @@ public class Board {
         history[game_ply].move = m.move();
         history[game_ply].halfmoveCounter = history[game_ply - 1].halfmoveCounter + 1;
         history[game_ply].entry |= (Square.getBb(m.to()) | Square.getBb(m.from()));
+        history[game_ply].pliesFromNull = history[game_ply - 1].pliesFromNull + 1;
 
         if (Piece.typeOf(board[m.from()]) == PieceType.PAWN)
             history[game_ply].halfmoveCounter = 0;
@@ -130,6 +166,7 @@ public class Board {
             case Move.DOUBLE_PUSH:
                 movePieceQuiet(m.from(), m.to());
                 history[game_ply].epsq = m.from() + Square.relative_dir(Square.NORTH, side_to_play);
+                hash ^= Zobrist.EN_PASSANT[Square.getFile(history[game_ply].epsq)];
                 break;
             case Move.OO:
                 if (side_to_play == Side.WHITE){
@@ -202,16 +239,23 @@ public class Board {
                 break;
         }
         history[game_ply].hash = hash();
+        history[game_ply].materialHash = materialHash;
         side_to_play = Side.flip(side_to_play);
+        hash ^= Zobrist.SIDE;
     }
 
     public Move pop(){
         side_to_play = Side.flip(side_to_play);
+        hash ^= Zobrist.SIDE;
+
         Move m = new Move(history[game_ply].move);
         switch (m.flags()){
             case Move.QUIET:
+                movePieceQuiet(m.to(), m.from());
+                break;
             case Move.DOUBLE_PUSH:
                 movePieceQuiet(m.to(), m.from());
+                hash ^= Zobrist.EN_PASSANT[Square.getFile(history[game_ply].epsq)];
                 break;
             case Move.OO:
                 if (side_to_play == Side.WHITE){
@@ -292,18 +336,46 @@ public class Board {
         return false;
     }
 
-    public boolean isThreefoldOrFiftyMove(){
-        final int lookBack = Math.min(game_ply, history[game_ply].halfmoveCounter);
+    public boolean kingAttacked(int side){
+        final int us = side;
+        final int them = Side.flip(side);
+        final int ourKing = Bitboard.lsb(bitboardOf(us, PieceType.KING));
+
+        if ((Attacks.pawnAttacks(ourKing, us) & bitboardOf(them, PieceType.PAWN)) != 0)
+            return true;
+
+        if ((Attacks.getKnightAttacks(ourKing) & bitboardOf(them, PieceType.KNIGHT)) != 0)
+            return true;
+
+        final long usBb = allPieces(us);
+        final long themBb = allPieces(them);
+        final long all = usBb | themBb;
+
+        final long theirDiagSliders = diagonalSliders(them);
+        final long theirOrthSliders = orthogonalSliders(them);
+
+        if ((Attacks.getRookAttacks(ourKing, all) & theirOrthSliders) != 0)
+            return true;
+
+        if ((Attacks.getBishopAttacks(ourKing, all) & theirDiagSliders) != 0)
+            return true;
+
+        return false;
+    }
+
+    public boolean isDraw(MoveList moves){
+        if (history[game_ply].halfmoveCounter >= 100 || (checkers == 0 && moves.size() == 0))
+            return true;
+
+        final int lookBack = Math.min(history[game_ply].pliesFromNull, history[game_ply].halfmoveCounter);
         int rep = 0;
         for (int i = 2; i <= lookBack; i += 2){
-            if (hash == history[game_ply - i].hash) {
-                rep++;
-                if (rep >= 2)
-                    return true;
+            if (materialHash == history[game_ply - i].materialHash
+            && ++rep >= 2) {
+                return true;
             }
         }
-
-        return history[game_ply].halfmoveCounter >= 100;
+        return false;
     }
 
     public MoveList generateLegalMoves(){
@@ -862,6 +934,9 @@ public class Board {
 
         side_to_play = state.toLowerCase().charAt(0) == 'w' ? Side.WHITE : Side.BLACK;
 
+        if (side_to_play == Side.BLACK)
+            hash ^= Zobrist.SIDE;
+
         if (!state.contains("K"))
             history[0].entry |= 0x0000000000000080L;
         if (!state.contains("Q"))
@@ -875,6 +950,7 @@ public class Board {
             String s = flags[2].toLowerCase().trim();
             if (!s.equals("-")){
                 history[game_ply].epsq = Square.getSquareFromName(s);
+                hash ^= Zobrist.EN_PASSANT[Square.getFile(Square.getSquareFromName(s))];
             }
         }
     }

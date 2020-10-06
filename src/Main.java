@@ -9,7 +9,6 @@ import java.util.Scanner;
 public class Main {
     private final static String ENGINENAME = "Weiawaga";
     private final static String AUTHOR = "Mal";
-
     private final static String UCI = "uci";
     private final static String GOTHINK = "go";
     private final  static String MOVEFROMSTART = "position startpos moves ";
@@ -20,13 +19,13 @@ public class Main {
     private final static String POSITIONFEN = "position fen";
 
 
-
     public static void main(String[] args) throws IOException {
 
         FileWriter fr = new FileWriter("./uciCommands.txt", true);
         BufferedWriter bw = new BufferedWriter(fr);
         Scanner input_stream = new Scanner(System.in);
         Board board = new Board();
+
         while (true){
             String input = input_stream.nextLine();
             bw.write(input + "\n");
@@ -90,10 +89,12 @@ public class Main {
                 Move best_move = Search.IDMove;
                 int best_value = Search.IDScore;
 
+
                 System.out.println("info score cp " + best_value);
                 System.out.println("bestmove " + best_move.uci());
-
                 TranspTable.reset();
+                MoveOrder.clearKillers();
+                MoveOrder.clearHistory();
                 System.gc();
                 Limits.resetTime();
             }
@@ -132,7 +133,7 @@ public class Main {
 
     private static long perft(Board board, int depth) {
         MoveList moves = board.generateLegalMoves();
-        if (depth == 1) {
+        if (depth == 0) {
             return moves.size();
         }
         long nodes = 0;

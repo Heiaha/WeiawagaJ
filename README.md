@@ -11,9 +11,10 @@ https://lichess.org/@/Weiawaga
   - Move generation
     - [Magic bitboard hashing](https://www.chessprogramming.org/Magic_Bitboards)
   - Search
-    - [Negamax / alpha-beta pruning](https://www.chessprogramming.org/Alpha-Beta)
+    - [Principal variation search](https://en.wikipedia.org/wiki/Principal_variation_search)
     - [Iterative deepening](https://en.wikipedia.org/wiki/Iterative_deepening_depth-first_search)
     - [Quiescence search](https://en.wikipedia.org/wiki/Quiescence_search)
+    - [Null move pruning](https://www.chessprogramming.org/Null_Move_Pruning)
     - [Check extensions](https://www.chessprogramming.org/Check_Extensions)
   - Evaluation
     - [Material imbalance](https://www.chessprogramming.org/Material)
@@ -26,5 +27,7 @@ https://lichess.org/@/Weiawaga
   - Move ordering
     - [Hash move](https://www.chessprogramming.org/Hash_Move)
     - [MVV/LVA](https://www.chessprogramming.org/MVV-LVA)
+    - [Killer Move Heuristic](https://www.chessprogramming.org/Killer_Heuristic)
+    - [History Heuristic](https://www.chessprogramming.org/History_Heuristic)
   - Other
     - [Zobrist hashing](https://www.chessprogramming.org/Zobrist_Hashing) / [Transposition table](https://en.wikipedia.org/wiki/Transposition_table)
