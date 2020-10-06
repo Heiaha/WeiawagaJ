@@ -53,7 +53,7 @@ public class Search {
         Move bestMove = null;
         for (Move move : moves){
             board.push(move);
-            value = -negamax(board, depth - 1, 1, -beta, -alpha, true);
+            value = -pVSearch(board, depth - 1, 1, -beta, -alpha, true);
             board.pop();
             if (stop || Limits.checkLimits()) {
                 stop = true;
@@ -74,7 +74,7 @@ public class Search {
         }
     }
 
-    public static int negamax(Board board, int depth, int ply, int alpha, int beta, boolean pV){
+    public static int pVSearch(Board board, int depth, int ply, int alpha, int beta, boolean pV){
 
         if (stop || Limits.checkLimits()) {
             stop = true;
@@ -128,7 +128,7 @@ public class Search {
         if (canApplyNullWindow(board, depth, pV)){
             int r = depth > 6 ? 3 : 2;
             board.pushNull();
-            int value = -negamax(board, depth - r - 1, ply + 1, -beta, -beta + 1, false);
+            int value = -pVSearch(board, depth - r - 1, ply + 1, -beta, -beta + 1, false);
 
             board.popNull();
             if (value >= beta){
@@ -146,16 +146,16 @@ public class Search {
 
             board.push(move);
             if (pVS) {
-                value = -negamax(board, depth - 1, ply + 1, -beta, -alpha, true);
+                value = -pVSearch(board, depth - 1, ply + 1, -beta, -alpha, true);
                 pVS = false;
             }
             else{
                 int reducedDepth = depth;
                 if (canApplyLMR(board, depth, move, moveIndex, inCheck))
                     reducedDepth = LMRReducedDepth(depth, pV);
-                value = -negamax(board, reducedDepth - 1, ply + 1, -alpha - 1, -alpha, false);
+                value = -pVSearch(board, reducedDepth - 1, ply + 1, -alpha - 1, -alpha, false);
                 if (value > alpha)
-                    value = -negamax(board, depth - 1, ply  + 1,  -beta, -alpha, false);
+                    value = -pVSearch(board, depth - 1, ply  + 1,  -beta, -alpha, false);
             }
             board.pop();
 
