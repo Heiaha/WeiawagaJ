@@ -1,7 +1,4 @@
-
-
 package mind;
-
 import movegen.*;
 
 public class TTEntry {

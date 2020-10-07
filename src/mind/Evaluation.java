@@ -35,10 +35,17 @@ public class Evaluation {
     //bishop scoring
     final static Score BISHOP_SAME_COLOR_PAWN_PENALTY = new Score(-3, -7); // per pawn
     final static Score BISHOP_ATTACKS_CENTER = new Score(30, 40);
-    final static Score BISHOP_PAIR_VALUE = new Score(45, 55);
+    final static Score BISHOP_PAIR_VALUE = new Score(50, 50);
 
     //mobility
     final static Score MOBILITY_BONUS = new Score(4, 1);
+
+    //7th
+    final static Score ROOK_ON_7TH = new Score(20, 40);
+    final static Score QUEEN_ON_7th = new Score(10, 20);
+
+    //Queen dist from king
+    final static int QUEEN_DIST_FROM_KING_INIT = 10;
 
     public final static Score[][] PIECE_TABLES = {
         {
@@ -125,20 +132,20 @@ public class Evaluation {
         return ((bishopBb & Bitboard.LIGHT_SQUARES) != 0) && ((bishopBb & Bitboard.DARK_SQUARES) != 0);
     }
 
-    public static int isolatedPawns(final long pawnBb){
+    public static int nIsolatedPawns(final long pawnBb){
         return Bitboard.popcount(
                 (pawnBb & ~Bitboard.fileFill(Bitboard.shift(pawnBb, Square.EAST))) &
                     (pawnBb & ~Bitboard.fileFill(Bitboard.shift(pawnBb,Square.WEST)))
         );
     }
 
-    public static int doubledPawns(final long pawnBb){
+    public static int nDoubledPawns(final long pawnBb){
         long fill = Bitboard.shift(pawnBb, Square.NORTH);
         fill = Bitboard.fill(fill, Square.NORTH);
         return Bitboard.popcount(fill & pawnBb);
     }
 
-    public static int passedPawns(final Board board, final int side){
+    public static int nPassedPawns(final Board board, final int side){
         long ourPawns = board.bitboardOf(side, PieceType.PAWN);
         long enemyPawns = board.bitboardOf(Side.flip(side), PieceType.PAWN);
         long fill = 0;
@@ -150,9 +157,9 @@ public class Evaluation {
 
     public static Score pawnStructure(Board board, int side){
         Score pawnScore = new Score();
-        pawnScore.add(PASSED_PAWN_VALUE, passedPawns(board, side));
-        pawnScore.add(DOUBLED_PAWN_PENALTY, doubledPawns(board.bitboardOf(side, PieceType.PAWN)));
-        pawnScore.add(ISOLATED_PAWN_PENALTY, isolatedPawns(board.bitboardOf(side, PieceType.PAWN)));
+        pawnScore.add(PASSED_PAWN_VALUE, nPassedPawns(board, side));
+        pawnScore.add(DOUBLED_PAWN_PENALTY, nDoubledPawns(board.bitboardOf(side, PieceType.PAWN)));
+        pawnScore.add(ISOLATED_PAWN_PENALTY, nIsolatedPawns(board.bitboardOf(side, PieceType.PAWN)));
         return pawnScore;
     }
 
@@ -177,6 +184,17 @@ public class Evaluation {
         };
     }
 
+    public static Score on7th(Board board, int side){
+        Score score = new Score();
+        long sevBb = File.getBb(Rank.relative_rank(7, side));
+        long enemyPawns = board.bitboardOf(Side.flip(side), PieceType.PAWN);
+        if ((sevBb & enemyPawns & board.bitboardOf(side, PieceType.ROOK)) != 0)
+            score.add(ROOK_ON_7TH);
+        if ((sevBb & enemyPawns & board.bitboardOf(side, PieceType.QUEEN)) != 0)
+            score.add(QUEEN_ON_7th);
+        return score;
+    }
+
     public static int evaluateState(final Board board){
         Score score = new Score();
         int phase = TOTAL_PHASE;
@@ -198,6 +216,9 @@ public class Evaluation {
         if (hasBishopPair(Piece.BLACK_BISHOP))
             score.sub(BISHOP_PAIR_VALUE);
 
+        // ON 7TH SCORE;
+        score.add(on7th(board, Side.WHITE));
+        score.sub(on7th(board, Side.BLACK));
 
         //EVALUATE KING POSITION
         int pawnShieldDiff = pawnsShieldingKing(board, Side.WHITE)
@@ -237,6 +258,9 @@ public class Evaluation {
                                 score.add(KING_TRAPPING_ROOK_PENALTY);
                         }
                     }
+                    case PieceType.QUEEN -> {
+                        score.add(QUEEN_DIST_FROM_KING_INIT - Square.getMDistance(sq, blackKingSq));
+                    }
                 }
             }
 
@@ -259,6 +283,9 @@ public class Evaluation {
                             if ((kf < File.FILE_E) == (Square.getFile(sq) < kf))
                                 score.sub(KING_TRAPPING_ROOK_PENALTY);
                         }
+                    }
+                    case PieceType.QUEEN -> {
+                        score.sub(QUEEN_DIST_FROM_KING_INIT - Square.getMDistance(sq, blackKingSq));
                     }
                 }
             }

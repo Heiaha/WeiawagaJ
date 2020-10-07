@@ -17,6 +17,7 @@ public class Main {
     private final static String QUIT = "quit";
     private final static String UCINEWGAME = "ucinewgame";
     private final static String POSITIONFEN = "position fen";
+    private final static SearchThread thread = new SearchThread();
 
 
     public static void main(String[] args) throws IOException {
@@ -84,19 +85,10 @@ public class Main {
                 int bincIndex = linearSearch(command, "binc");
                 if (bincIndex != -1)
                     Limits.increment[Side.BLACK] = Long.parseLong(command[bincIndex + 1]);
-
-                Search.itDeep(board);
-                Move best_move = Search.IDMove;
-                int best_value = Search.IDScore;
-
-
-                System.out.println("info score cp " + best_value);
-                System.out.println("bestmove " + best_move.uci());
-                TranspTable.reset();
-                MoveOrder.clearKillers();
-                MoveOrder.clearHistory();
-                System.gc();
-                Limits.resetTime();
+                thread.startSearch(board);
+            }
+            else if (input.equals(STOP)){
+                thread.stop();
             }
             bw.flush();
         }

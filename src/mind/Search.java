@@ -4,9 +4,9 @@ import movegen.*;
 public class Search {
     final public static int MAX_SEARCH_DEPTH = 25;
     final public static int INF = 99999;
-    public static boolean stop;
-    public static Move IDMove = null;
-    public static int IDScore = -INF;
+    private static boolean stop;
+    private static Move IDMove = null;
+    private static int IDScore = -INF;
 
     private final static int NullMinDepth = 5;
     private final static int LMRMinDepth = 2;
@@ -20,8 +20,6 @@ public class Search {
         Limits.calcTime(board.getSideToPlay(), board.game_ply);
         Limits.startTime = System.currentTimeMillis();
         int searchDepth = MAX_SEARCH_DEPTH;
-        if (Evaluation.getPhaseValue(board) > 10)
-            searchDepth += 2;
         IDMove = null;
         IDScore = -INF;
         stop = false;
@@ -34,7 +32,7 @@ public class Search {
             System.out.println(" nodes " + Statistics.totalNodes());
             Statistics.reset();
             long elapsed = System.currentTimeMillis() - Limits.startTime;
-            if (elapsed >= Limits.timeAllocated/2 || isScoreCheckmate(IDScore))
+            if (stop || elapsed >= Limits.timeAllocated/2 || isScoreCheckmate(IDScore))
                 break;
         }
     }
@@ -240,5 +238,17 @@ public class Search {
         return pV ?
             depth - LMRPVReduction :
             depth / LMRNonPVDiv;
+    }
+
+    public static Move getMove(){
+        return IDMove;
+    }
+
+    public static int getScore(){
+        return IDScore;
+    }
+
+    public static void stop(){
+        stop = true;
     }
 }

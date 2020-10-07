@@ -1,5 +1,3 @@
-
-
 package mind;
 
 import movegen.Move;

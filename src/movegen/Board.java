@@ -1,12 +1,17 @@
 package movegen;
 
+import mind.Score;
+
 public class Board {
     private final long[] piece_bb = new long[Piece.NPIECES]; //bitboards
     private final int[] board = new int[64]; // board of pieces
     private int side_to_play;
     private long hash;
     private long materialHash;
+    private long pawnHash;
     public int game_ply;
+    private Score materialScore;
+    private Score pSqScore;
     public UndoInfo[] history = new UndoInfo[1000];
 
     private long checkers;
@@ -44,11 +49,15 @@ public class Board {
         piece_bb[piece] |= Square.getBb(square);
         hash ^= Zobrist.ZOBRIST_TABLE[piece][square];
         materialHash ^= Zobrist.ZOBRIST_TABLE[piece][square];
+        if (Piece.typeOf(board[square]) == PieceType.PAWN)
+            pawnHash ^= Zobrist.ZOBRIST_TABLE[board[square]][square];
     }
 
     public void removePiece(int square){
         hash ^= Zobrist.ZOBRIST_TABLE[board[square]][square];
         materialHash ^= Zobrist.ZOBRIST_TABLE[board[square]][square];
+        if (Piece.typeOf(board[square]) == PieceType.PAWN)
+            pawnHash ^= Zobrist.ZOBRIST_TABLE[board[square]][square];
         piece_bb[board[square]] &= ~Square.getBb(square);
         board[square] = Piece.NONE;
     }
@@ -58,6 +67,9 @@ public class Board {
                 Zobrist.ZOBRIST_TABLE[board[toSq]][toSq];
         materialHash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq] ^
                 Zobrist.ZOBRIST_TABLE[board[toSq]][toSq];
+        if (Piece.typeOf(board[fromSq]) == PieceType.PAWN || Piece.typeOf(board[toSq]) == PieceType.PAWN)
+            pawnHash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq] ^
+                    Zobrist.ZOBRIST_TABLE[board[toSq]][toSq];
         long mask = Square.getBb(fromSq) | Square.getBb(toSq);
         piece_bb[board[fromSq]] ^= mask;
         piece_bb[board[toSq]] &= ~mask;
@@ -68,6 +80,8 @@ public class Board {
     public void movePieceQuiet(int fromSq, int toSq){
         hash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq];
         materialHash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq];
+        if (Piece.typeOf(board[fromSq]) == PieceType.PAWN)
+            pawnHash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq];
         piece_bb[board[fromSq]] ^= (Square.getBb(fromSq) | Square.getBb(toSq));
         board[toSq] = board[fromSq];
         board[fromSq] = Piece.NONE;
@@ -79,6 +93,10 @@ public class Board {
 
     public long materialHash(){
         return materialHash;
+    }
+
+    public long pawnHash(){
+        return pawnHash;
     }
 
     public long bitboardOf(int piece){

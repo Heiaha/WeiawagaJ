@@ -25,8 +25,8 @@ public class Piece {
         return piece & 0b111;
     }
 
-    public static int sideOf(int side){
-        return (side & 0b1000) >>> 3;
+    public static int sideOf(int piece){
+        return (piece & 0b1000) >>> 3;
     }
 
     public static int makePiece(int side, int pieceType){
