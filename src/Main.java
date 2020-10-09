@@ -62,15 +62,21 @@ public class Main {
                 for (String move_string : correctedMoveStrings){
                     board.pushFromString(move_string);
                 }
+                System.out.println(board.pSqScore().mg);
+                System.out.println(board.pSqScore().eg);
             }
             else if (input.startsWith(POSITIONFEN)){
                 String fenString = input.replace(POSITIONFEN, "");
                 fenString = fenString.trim();
                 board.setFen(fenString);
+                System.out.println(board.pSqScore().mg);
+                System.out.println(board.pSqScore().eg);
             }
             else if (input.startsWith(GOTHINK)){
                 String[] command = input.split(" ");
                 int moveTimeIndex = linearSearch(command, "movetime");
+                if (input.contains("infinite"))
+                    Limits.timeAllocated = Long.MAX_VALUE;
                 if (moveTimeIndex != -1)
                     Limits.timeAllocated = Long.parseLong(command[moveTimeIndex + 1]);
                 int wtimeIndex = linearSearch(command, "wtime");

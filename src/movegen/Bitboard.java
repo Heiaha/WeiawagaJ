@@ -55,17 +55,6 @@ public class Bitboard {
         }
     }
 
-    public static long[][] PAWN_SHIELD_MASKS = new long[2][64];
-    static {
-        for (int sq = Square.A1; sq <= Square.H8; sq++) {
-            long sq_bb = Square.getBb(sq);
-            PAWN_SHIELD_MASKS[Side.WHITE][sq] = ((sq_bb << 8) | ((sq_bb << 7) & ~File.getBb(File.FILE_H)) |
-                    ((sq_bb << 9) & ~File.getBb(File.FILE_A))) & Rank.getBb(Rank.RANK_2);
-            PAWN_SHIELD_MASKS[Side.BLACK][sq] = ((sq_bb >>> 8) | ((sq_bb >>> 7) & ~File.getBb(File.FILE_A)) |
-                    ((sq_bb >>> 9) & ~File.getBb(File.FILE_H))) & Rank.getBb(Rank.RANK_7);
-        }
-    }
-
     //initialize square between
     public final static long[][] BB_SQUARES_BETWEEN = new long[64][64];
     static {

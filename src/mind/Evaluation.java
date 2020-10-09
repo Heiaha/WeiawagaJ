@@ -9,16 +9,17 @@ public class Evaluation {
     public static long allPieces;
 
     final static int TOTAL_PHASE = 24;
-    final static int[] PIECE_PHASES = {0, 1, 1, 2, 4};
+    public final static int[] PIECE_PHASES = {0, 1, 1, 2, 4, 0};
 
     final static Score TEMPO = new Score(20, 10);
 
     public final static Score[] PIECE_TYPE_VALUES = {
-            new Score(70, 90), // PAWN
+            new Score(70, 90),   // PAWN
             new Score(325, 325), // KNIGHT
             new Score(325, 325), // BISHOP
             new Score(500, 500), // ROOK
-            new Score(975, 975)  // QUEEN
+            new Score(975, 975), // QUEEN
+            new Score(0, 0)      // KING
     };
 
     //pawn scoring
@@ -37,15 +38,23 @@ public class Evaluation {
     final static Score BISHOP_ATTACKS_CENTER = new Score(30, 40);
     final static Score BISHOP_PAIR_VALUE = new Score(50, 50);
 
-    //mobility
-    final static Score MOBILITY_BONUS = new Score(4, 1);
-
     //7th
     final static Score ROOK_ON_7TH = new Score(20, 40);
-    final static Score QUEEN_ON_7th = new Score(10, 20);
+    final static Score QUEEN_ON_7TH = new Score(10, 20);
 
     //Queen dist from king
     final static int QUEEN_DIST_FROM_KING_INIT = 10;
+
+    public final static int[] KNIGHT_OUTPOST_SCORE = {
+            0, 0, 0,  0,  0, 0, 0, 0,
+            0, 0, 0,  0,  0, 0, 0, 0,
+            0, 0, 0,  0,  0, 0, 0, 0,
+            0, 2, 5, 10, 10, 5, 2, 0,
+            0, 2, 5, 10, 10, 5, 2, 0,
+            0, 0, 4,  5,  5, 4, 0, 0,
+            0, 0, 0,  0,  0, 0, 0, 0,
+            0, 0, 0,  0,  0, 0, 0, 0,
+    };
 
     public final static Score[][] PIECE_TABLES = {
         {
@@ -110,22 +119,23 @@ public class Evaluation {
         }
     };
 
+    public static long[][] PAWN_SHIELD_MASKS = new long[2][64];
+    static {
+        for (int sq = Square.A1; sq <= Square.H8; sq++) {
+            long sq_bb = Square.getBb(sq);
+            PAWN_SHIELD_MASKS[Side.WHITE][sq] = ((sq_bb << 8) | ((sq_bb << 7) & ~File.getBb(File.FILE_H)) |
+                    ((sq_bb << 9) & ~File.getBb(File.FILE_A))) & Rank.getBb(Rank.RANK_2);
+            PAWN_SHIELD_MASKS[Side.BLACK][sq] = ((sq_bb >>> 8) | ((sq_bb >>> 7) & ~File.getBb(File.FILE_A)) |
+                    ((sq_bb >>> 9) & ~File.getBb(File.FILE_H))) & Rank.getBb(Rank.RANK_7);
+        }
+    }
+
     public static void initEval(final Board board){
         allWhitePieces = board.allPieces(Side.WHITE);
         allBlackPieces = board.allPieces(Side.BLACK);
         allPieces = allWhitePieces | allBlackPieces;
         whiteKingSq = Bitboard.lsb(board.bitboardOf(Piece.WHITE_KING));
         blackKingSq = Bitboard.lsb(board.bitboardOf(Piece.BLACK_KING));
-    }
-
-    public static int getPhaseValue(final Board board){
-        int phase = TOTAL_PHASE;
-        for (int pieceType = PieceType.PAWN; pieceType <= PieceType.QUEEN; pieceType++){
-            long whitePieces = board.bitboardOf(Side.WHITE, pieceType);
-            long blackPieces = board.bitboardOf(Side.BLACK, pieceType);
-            phase -= PIECE_PHASES[pieceType]*Bitboard.popcount(whitePieces | blackPieces);
-        }
-        return phase;
     }
 
     public static boolean hasBishopPair(final long bishopBb){
@@ -155,7 +165,18 @@ public class Evaluation {
         return Bitboard.popcount(ourPawns & ~fill);
     }
 
-    public static Score pawnStructure(Board board, int side){
+    public static int pawnsShieldingKing(final Board board, int side){
+        int kingSq = side == Side.WHITE ? whiteKingSq : blackKingSq;
+        long pawns = board.bitboardOf(side, PieceType.PAWN);
+        return Bitboard.popcount(PAWN_SHIELD_MASKS[side][kingSq] & pawns);
+    }
+
+    public static int pawnsOnSameColorSquare(final Board board, int square, int side){
+        return Bitboard.popcount(board.bitboardOf(side, PieceType.PAWN) &
+                ((Bitboard.DARK_SQUARES & Square.getBb(square)) != 0 ? Bitboard.DARK_SQUARES : Bitboard.LIGHT_SQUARES));
+    }
+
+    public static Score pawnScore(Board board, int side){
         Score pawnScore = new Score();
         pawnScore.add(PASSED_PAWN_VALUE, nPassedPawns(board, side));
         pawnScore.add(DOUBLED_PAWN_PENALTY, nDoubledPawns(board.bitboardOf(side, PieceType.PAWN)));
@@ -163,135 +184,132 @@ public class Evaluation {
         return pawnScore;
     }
 
-    public static int pawnsShieldingKing(final Board board, int side){
-        int kingSq = side == Side.WHITE ? whiteKingSq : blackKingSq;
-        long pawns = board.bitboardOf(side, PieceType.PAWN);
-        return Bitboard.popcount(Bitboard.PAWN_SHIELD_MASKS[side][kingSq] & pawns);
-    }
-
-    public static int pawnsOnSameColorSquare(final Board board, int square, int side){
-        return Bitboard.popcount(board.bitboardOf(side, PieceType.PAWN) & ((Bitboard.DARK_SQUARES & Square.getBb(square)) != 0 ? Bitboard.DARK_SQUARES : Bitboard.LIGHT_SQUARES));
-    }
-
-    public static int mobilityofPiece(int sq, int pieceType, int side){
-        long ourPieces = side == Side.WHITE ? allWhitePieces : allBlackPieces;
-        return switch (pieceType) {
-            case PieceType.BISHOP -> Bitboard.popcount(Attacks.getBishopAttacks(sq, allPieces) & ~ourPieces);
-            case PieceType.KNIGHT -> Bitboard.popcount(Attacks.getKnightAttacks(sq) & ~ourPieces);
-            case PieceType.ROOK -> Bitboard.popcount(Attacks.getRookAttacks(sq, allPieces) & ~ourPieces);
-            case PieceType.QUEEN -> Bitboard.popcount((Attacks.getRookAttacks(sq, allPieces) | Attacks.getBishopAttacks(sq, allPieces)) & ~ourPieces);
-            default -> 0;
-        };
-    }
-
-    public static Score on7th(Board board, int side){
+    public static Score knightScore(Board board, int side){
+        long knightBb = board.bitboardOf(side, PieceType.KNIGHT);
+        long attacks;
+        int sq;
+        int mobility = 0;
         Score score = new Score();
-        long sevBb = File.getBb(Rank.relative_rank(7, side));
+
+        while (knightBb != 0){
+            sq = Bitboard.lsb(knightBb);
+            knightBb = Bitboard.extractLsb(knightBb);
+            mobility += Bitboard.popcount(Attacks.getKnightAttacks(sq) & ~allPieces);
+
+            int outpostSq = side == Side.WHITE ? sq : Square.squareMirror(sq);
+            if (board.pieceAt(sq + Square.relative_dir(Square.SOUTH_EAST, side)) == Piece.makePiece(side, PieceType.PAWN)) {
+                score.add(KNIGHT_OUTPOST_SCORE[outpostSq]);
+            }
+            if (board.pieceAt(sq + Square.relative_dir(Square.SOUTH_WEST, side)) == Piece.makePiece(side, PieceType.PAWN)) {
+                score.add(KNIGHT_OUTPOST_SCORE[outpostSq]);
+            }
+        }
+        score.add((mobility - 4) * 4);
+        return score;
+    }
+
+    public static Score bishopScore(Board board, int side){
+        long bishopsBb = board.bitboardOf(side, PieceType.BISHOP);
+        int sq;
+        long attacks;
+        int mobility = 0;
+        Score score = new Score();
+        if (hasBishopPair(bishopsBb))
+            score.add(BISHOP_PAIR_VALUE);
+
+        while (bishopsBb != 0) {
+            sq = Bitboard.lsb(bishopsBb);
+            bishopsBb = Bitboard.extractLsb(bishopsBb);
+            attacks = Attacks.getBishopAttacks(sq, allPieces) & ~allPieces;
+            mobility += Bitboard.popcount(attacks);
+            if (Bitboard.popcount(attacks & Bitboard.CENTER) == 2)
+                score.add(BISHOP_ATTACKS_CENTER);
+            score.add(BISHOP_SAME_COLOR_PAWN_PENALTY, pawnsOnSameColorSquare(board, sq, side));
+        }
+        score.add((mobility - 6) * 5);
+        return score;
+    }
+
+    public static Score rookScore(Board board, int side){
+        long rooksBb = board.bitboardOf(side, PieceType.ROOK);
+        int ourKingSq = side == Side.WHITE ? whiteKingSq : blackKingSq;
+        int sq;
+        int mobility = 0;
+        int pieceMobility;
+        Score score = new Score();
+
+        // check for rooks on the 7th
         long enemyPawns = board.bitboardOf(Side.flip(side), PieceType.PAWN);
-        if ((sevBb & enemyPawns & board.bitboardOf(side, PieceType.ROOK)) != 0)
+        long sevBb = File.getBb(Rank.relative_rank(7, side));
+        if ((sevBb & enemyPawns & rooksBb) != 0)
             score.add(ROOK_ON_7TH);
-        if ((sevBb & enemyPawns & board.bitboardOf(side, PieceType.QUEEN)) != 0)
-            score.add(QUEEN_ON_7th);
+
+        while (rooksBb != 0){
+            sq = Bitboard.lsb(rooksBb);
+            rooksBb = Bitboard.extractLsb(rooksBb);
+
+            pieceMobility = Bitboard.popcount(Attacks.getRookAttacks(sq, allPieces) & ~allPieces);
+            mobility += pieceMobility;
+
+            // check to see if the king has trapped a rook
+            if (pieceMobility <= 3) {
+                int kf = Square.getFile(ourKingSq);
+                if ((kf < File.FILE_E) == (Square.getFile(sq) < kf))
+                    score.add(KING_TRAPPING_ROOK_PENALTY);
+            }
+        }
+        score.add((mobility - 7) * 2, (mobility - 7) * 4);
+        return score;
+    }
+
+    public static Score queenScore(Board board, int side){
+        long queensBb = board.bitboardOf(side, PieceType.QUEEN);
+        Score score = new Score();
+
+        long enemyPawns = board.bitboardOf(Side.flip(side), PieceType.PAWN);
+        long sevBb = File.getBb(Rank.relative_rank(7, side));
+        if ((sevBb & enemyPawns & queensBb) != 0)
+            score.add(QUEEN_ON_7TH);
+        return score;
+    }
+
+    public static Score kingScore(Board board, int side){
+        Score score = new Score();
+        int pawnShield = pawnsShieldingKing(board, side);
+        score.add(KING_PAWN_SHIELD_BONUS, pawnShield);
         return score;
     }
 
     public static int evaluateState(final Board board){
-        Score score = new Score();
-        int phase = TOTAL_PHASE;
-        int sq;
         initEval(board);
+        Score score = new Score();
+        score.add(board.materialScore());
+        score.add(board.pSqScore());
 
         if (board.getSideToPlay() == Side.WHITE)
             score.add(TEMPO);
         else
             score.sub(TEMPO);
 
-        // EVALUATE PAWN STRUCTURE
-        score.add(pawnStructure(board, Side.WHITE));
-        score.sub(pawnStructure(board, Side.BLACK));
+        score.add(pawnScore(board, Side.WHITE));
+        score.sub(pawnScore(board, Side.BLACK));
 
-        if (hasBishopPair(Piece.WHITE_BISHOP))
-            score.add(BISHOP_PAIR_VALUE);
+        score.add(knightScore(board, Side.WHITE));
+        score.sub(knightScore(board, Side.BLACK));
 
-        if (hasBishopPair(Piece.BLACK_BISHOP))
-            score.sub(BISHOP_PAIR_VALUE);
+        score.add(bishopScore(board, Side.WHITE));
+        score.sub(bishopScore(board, Side.BLACK));
 
-        // ON 7TH SCORE;
-        score.add(on7th(board, Side.WHITE));
-        score.sub(on7th(board, Side.BLACK));
+        score.add(rookScore(board, Side.WHITE));
+        score.sub(rookScore(board, Side.BLACK));
 
-        //EVALUATE KING POSITION
-        int pawnShieldDiff = pawnsShieldingKing(board, Side.WHITE)
-                - pawnsShieldingKing(board, Side.BLACK);
-        score.add(KING_PAWN_SHIELD_BONUS, pawnShieldDiff);
+        score.add(queenScore(board, Side.WHITE));
+        score.sub(queenScore(board, Side.BLACK));
 
-        score.add(PIECE_TABLES[PieceType.KING][whiteKingSq]);
-        score.sub(PIECE_TABLES[PieceType.KING][Square.squareMirror(blackKingSq)]);
+        score.add(kingScore(board, Side.WHITE));
+        score.sub(kingScore(board, Side.BLACK));
 
-        long whitePieces;
-        long blackPieces;
-        int mobility;
-        for (int pieceType = PieceType.PAWN; pieceType <= PieceType.QUEEN; pieceType++){
-            whitePieces = board.bitboardOf(Side.WHITE, pieceType);
-            blackPieces = board.bitboardOf(Side.BLACK, pieceType);
-            phase -= PIECE_PHASES[pieceType]*Bitboard.popcount(whitePieces | blackPieces);
-            score.add(PIECE_TYPE_VALUES[pieceType], Bitboard.popcount(whitePieces));
-            score.sub(PIECE_TYPE_VALUES[pieceType], Bitboard.popcount(blackPieces));
-
-            while (whitePieces != 0){
-                sq = Bitboard.lsb(whitePieces);
-                whitePieces = Bitboard.extractLsb(whitePieces);
-                score.add(PIECE_TABLES[pieceType][sq]);
-                mobility = mobilityofPiece(sq, pieceType, Side.WHITE);
-                score.add(MOBILITY_BONUS, mobility);
-                switch (pieceType) {
-                    case PieceType.BISHOP -> {
-                        score.add(BISHOP_SAME_COLOR_PAWN_PENALTY, pawnsOnSameColorSquare(board, sq, Side.WHITE));
-                        if (Bitboard.popcount(Attacks.getBishopAttacks(sq, allPieces) & Bitboard.CENTER) == 2)
-                            score.add(BISHOP_ATTACKS_CENTER);
-                    }
-                    case PieceType.ROOK -> {
-                        // make sure the rook isn't trapped by the king.
-                        if (mobility <= 3) {
-                            int kf = Square.getFile(whiteKingSq);
-                            if ((kf < File.FILE_E) == (Square.getFile(sq) < kf))
-                                score.add(KING_TRAPPING_ROOK_PENALTY);
-                        }
-                    }
-                    case PieceType.QUEEN -> {
-                        score.add(QUEEN_DIST_FROM_KING_INIT - Square.getMDistance(sq, blackKingSq));
-                    }
-                }
-            }
-
-            while (blackPieces != 0){
-                sq = Bitboard.lsb(blackPieces);
-                blackPieces = Bitboard.extractLsb(blackPieces);
-                score.sub(PIECE_TABLES[pieceType][Square.squareMirror(sq)]);
-                mobility = mobilityofPiece(sq, pieceType, Side.BLACK);
-                score.sub(MOBILITY_BONUS, mobility);
-                switch (pieceType) {
-                    case PieceType.BISHOP -> {
-                        score.sub(BISHOP_SAME_COLOR_PAWN_PENALTY, pawnsOnSameColorSquare(board, sq, Side.BLACK));
-                        if (Bitboard.popcount(Attacks.getBishopAttacks(sq, allPieces) & Bitboard.CENTER) == 2)
-                            score.sub(BISHOP_ATTACKS_CENTER);
-                    }
-                    case PieceType.ROOK -> {
-                        // make sure the rook isn't trapped by the king.
-                        if (mobility <= 3) {
-                            int kf = Square.getFile(blackKingSq);
-                            if ((kf < File.FILE_E) == (Square.getFile(sq) < kf))
-                                score.sub(KING_TRAPPING_ROOK_PENALTY);
-                        }
-                    }
-                    case PieceType.QUEEN -> {
-                        score.sub(QUEEN_DIST_FROM_KING_INIT - Square.getMDistance(sq, blackKingSq));
-                    }
-                }
-            }
-        }
-
-        int finalScore = score.eval(phase);
+        int finalScore = score.eval(board.phase());
         return board.getSideToPlay() == Side.WHITE ? finalScore : -finalScore;
     }
 }

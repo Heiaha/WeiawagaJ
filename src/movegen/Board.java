@@ -1,5 +1,6 @@
 package movegen;
 
+import mind.Evaluation;
 import mind.Score;
 
 public class Board {
@@ -8,11 +9,12 @@ public class Board {
     private int side_to_play;
     private long hash;
     private long materialHash;
-    private long pawnHash;
-    public int game_ply;
-    private Score materialScore;
-    private Score pSqScore;
-    public UndoInfo[] history = new UndoInfo[1000];
+    private int gamePly;
+
+    private int phase = 24;
+    private final Score materialScore = new Score(0, 0);
+    private final Score pSqScore = new Score(0, 0);
+    private UndoInfo[] history = new UndoInfo[1000];
 
     private long checkers;
     private long pinned;
@@ -24,11 +26,14 @@ public class Board {
     public Board(boolean clear){
         if (!clear)
             setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        else{
+            clear();
+        }
     }
 
     public void clear(){
         side_to_play = Side.WHITE;
-        game_ply = 0;
+        gamePly = 0;
         for (int piece = 0; piece < Piece.NPIECES; piece++)
             piece_bb[piece] = 0L;
 
@@ -37,6 +42,8 @@ public class Board {
     }
 
     public int pieceAt(int square){
+        if (square > 63 || square < 0)
+            return Piece.NONE;
         return board[square];
     }
 
@@ -45,46 +52,111 @@ public class Board {
     }
 
     public void setPieceAt(int piece, int square){
+        int pieceType = Piece.typeOf(piece);
+        int side = Piece.sideOf(piece);
+
+        //set piece on board
         board[square] = piece;
         piece_bb[piece] |= Square.getBb(square);
+
+        //update hashes
         hash ^= Zobrist.ZOBRIST_TABLE[piece][square];
         materialHash ^= Zobrist.ZOBRIST_TABLE[piece][square];
-        if (Piece.typeOf(board[square]) == PieceType.PAWN)
-            pawnHash ^= Zobrist.ZOBRIST_TABLE[board[square]][square];
+
+        //update incremental evaluation terms
+        phase -= Evaluation.PIECE_PHASES[pieceType];
+        if (side == Side.WHITE){
+            materialScore.add(Evaluation.PIECE_TYPE_VALUES[pieceType]);
+            pSqScore.add(Evaluation.PIECE_TABLES[pieceType][square]);
+        }
+        else {
+            materialScore.sub(Evaluation.PIECE_TYPE_VALUES[pieceType]);
+            pSqScore.sub(Evaluation.PIECE_TABLES[pieceType][Square.squareMirror(square)]);
+        }
     }
 
     public void removePiece(int square){
+        int pieceType = Piece.typeOf(board[square]);
+        int side = Piece.sideOf(board[square]);
+
+        //update hash tables
         hash ^= Zobrist.ZOBRIST_TABLE[board[square]][square];
         materialHash ^= Zobrist.ZOBRIST_TABLE[board[square]][square];
-        if (Piece.typeOf(board[square]) == PieceType.PAWN)
-            pawnHash ^= Zobrist.ZOBRIST_TABLE[board[square]][square];
+
+        //update board
         piece_bb[board[square]] &= ~Square.getBb(square);
         board[square] = Piece.NONE;
+
+        //update incremental evaluation terms
+        phase += Evaluation.PIECE_PHASES[pieceType];
+        if (side == Side.WHITE){
+            materialScore.sub(Evaluation.PIECE_TYPE_VALUES[pieceType]);
+            pSqScore.sub(Evaluation.PIECE_TABLES[pieceType][square]);
+        }
+        else {
+            materialScore.add(Evaluation.PIECE_TYPE_VALUES[pieceType]);
+            pSqScore.add(Evaluation.PIECE_TABLES[pieceType][Square.squareMirror(square)]);
+        }
     }
 
     public void movePiece(int fromSq, int toSq){
+        int movingPieceType = Piece.typeOf(board[fromSq]);
+        int capturedPieceType = Piece.typeOf(board[toSq]);
+        int sideMoving = Piece.sideOf(board[fromSq]);
+
+        //update hashes
         hash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq] ^
                 Zobrist.ZOBRIST_TABLE[board[toSq]][toSq];
         materialHash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq] ^
                 Zobrist.ZOBRIST_TABLE[board[toSq]][toSq];
-        if (Piece.typeOf(board[fromSq]) == PieceType.PAWN || Piece.typeOf(board[toSq]) == PieceType.PAWN)
-            pawnHash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq] ^
-                    Zobrist.ZOBRIST_TABLE[board[toSq]][toSq];
+        
+        //update board
         long mask = Square.getBb(fromSq) | Square.getBb(toSq);
         piece_bb[board[fromSq]] ^= mask;
         piece_bb[board[toSq]] &= ~mask;
         board[toSq] = board[fromSq];
         board[fromSq] = Piece.NONE;
+
+        //update incremental evaluation terms
+        phase += Evaluation.PIECE_PHASES[capturedPieceType];
+        if (sideMoving == Side.WHITE){
+            pSqScore.sub(Evaluation.PIECE_TABLES[movingPieceType][fromSq]);
+            pSqScore.add(Evaluation.PIECE_TABLES[movingPieceType][toSq]);
+            pSqScore.add(Evaluation.PIECE_TABLES[capturedPieceType][Square.squareMirror(toSq)]);
+            materialScore.add(Evaluation.PIECE_TYPE_VALUES[capturedPieceType]);
+
+        }
+        else {
+            pSqScore.add(Evaluation.PIECE_TABLES[movingPieceType][Square.squareMirror(fromSq)]);
+            pSqScore.sub(Evaluation.PIECE_TABLES[movingPieceType][Square.squareMirror(toSq)]);
+            pSqScore.sub(Evaluation.PIECE_TABLES[capturedPieceType][toSq]);
+            materialScore.sub(Evaluation.PIECE_TYPE_VALUES[capturedPieceType]);
+        }
+
     }
 
     public void movePieceQuiet(int fromSq, int toSq){
+        int pieceType = Piece.typeOf(board[fromSq]);
+        int side = Piece.sideOf(board[fromSq]);
+
+        //update hashes
         hash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq];
         materialHash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq];
-        if (Piece.typeOf(board[fromSq]) == PieceType.PAWN)
-            pawnHash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq];
+
+        //update board
         piece_bb[board[fromSq]] ^= (Square.getBb(fromSq) | Square.getBb(toSq));
         board[toSq] = board[fromSq];
         board[fromSq] = Piece.NONE;
+
+        //update incremental evaluation terms
+        if (side == Side.WHITE){
+            pSqScore.sub(Evaluation.PIECE_TABLES[pieceType][fromSq]);
+            pSqScore.add(Evaluation.PIECE_TABLES[pieceType][toSq]);
+        }
+        else {
+            pSqScore.add(Evaluation.PIECE_TABLES[pieceType][Square.squareMirror(fromSq)]);
+            pSqScore.sub(Evaluation.PIECE_TABLES[pieceType][Square.squareMirror(toSq)]);
+        }
     }
 
     public long hash(){
@@ -95,9 +167,6 @@ public class Board {
         return materialHash;
     }
 
-    public long pawnHash(){
-        return pawnHash;
-    }
 
     public long bitboardOf(int piece){
         return piece_bb[piece];
@@ -144,38 +213,38 @@ public class Board {
     }
 
     public void pushNull(){
-        game_ply++;
-        history[game_ply] = new UndoInfo();
-        history[game_ply].entry = history[game_ply - 1].entry;
-        history[game_ply].halfmoveCounter = history[game_ply].halfmoveCounter + 1;
-        history[game_ply].pliesFromNull = 0;
-        history[game_ply].hash = history[game_ply - 1].hash;
-        history[game_ply].materialHash = history[game_ply - 1].materialHash;
-        if (history[game_ply - 1].epsq != Square.NO_SQUARE)
-            hash ^= Zobrist.EN_PASSANT[Square.getFile(history[game_ply - 1].epsq)];
+        gamePly++;
+        history[gamePly] = new UndoInfo();
+        history[gamePly].entry = history[gamePly - 1].entry;
+        history[gamePly].halfmoveCounter = history[gamePly].halfmoveCounter + 1;
+        history[gamePly].pliesFromNull = 0;
+        history[gamePly].hash = history[gamePly - 1].hash;
+        history[gamePly].materialHash = history[gamePly - 1].materialHash;
+        if (history[gamePly - 1].epsq != Square.NO_SQUARE)
+            hash ^= Zobrist.EN_PASSANT[Square.getFile(history[gamePly - 1].epsq)];
         hash ^= Zobrist.SIDE;
         side_to_play = Side.flip(side_to_play);
     }
 
     public void popNull(){
-        game_ply--;
+        gamePly--;
         hash ^= Zobrist.SIDE;
-        if (history[game_ply].epsq != Square.NO_SQUARE)
-            hash ^= Zobrist.EN_PASSANT[Square.getFile(history[game_ply].epsq)];
+        if (history[gamePly].epsq != Square.NO_SQUARE)
+            hash ^= Zobrist.EN_PASSANT[Square.getFile(history[gamePly].epsq)];
         side_to_play = Side.flip(side_to_play);
     }
 
     public void push(Move m) {
-        game_ply++;
-        history[game_ply] = new UndoInfo();
-        history[game_ply].entry = history[game_ply - 1].entry;
-        history[game_ply].move = m.move();
-        history[game_ply].halfmoveCounter = history[game_ply - 1].halfmoveCounter + 1;
-        history[game_ply].entry |= (Square.getBb(m.to()) | Square.getBb(m.from()));
-        history[game_ply].pliesFromNull = history[game_ply - 1].pliesFromNull + 1;
+        gamePly++;
+        history[gamePly] = new UndoInfo();
+        history[gamePly].entry = history[gamePly - 1].entry;
+        history[gamePly].move = m.move();
+        history[gamePly].halfmoveCounter = history[gamePly - 1].halfmoveCounter + 1;
+        history[gamePly].entry |= (Square.getBb(m.to()) | Square.getBb(m.from()));
+        history[gamePly].pliesFromNull = history[gamePly - 1].pliesFromNull + 1;
 
         if (Piece.typeOf(board[m.from()]) == PieceType.PAWN)
-            history[game_ply].halfmoveCounter = 0;
+            history[gamePly].halfmoveCounter = 0;
 
         switch (m.flags()){
             case Move.QUIET:
@@ -183,8 +252,8 @@ public class Board {
                 break;
             case Move.DOUBLE_PUSH:
                 movePieceQuiet(m.from(), m.to());
-                history[game_ply].epsq = m.from() + Square.relative_dir(Square.NORTH, side_to_play);
-                hash ^= Zobrist.EN_PASSANT[Square.getFile(history[game_ply].epsq)];
+                history[gamePly].epsq = m.from() + Square.relative_dir(Square.NORTH, side_to_play);
+                hash ^= Zobrist.EN_PASSANT[Square.getFile(history[gamePly].epsq)];
                 break;
             case Move.OO:
                 if (side_to_play == Side.WHITE){
@@ -228,36 +297,36 @@ public class Board {
                 break;
             case Move.PC_KNIGHT:
                 removePiece(m.from());
-                history[game_ply].captured = board[m.to()];
+                history[gamePly].captured = board[m.to()];
                 removePiece(m.to());
                 setPieceAt(Piece.makePiece(side_to_play, PieceType.KNIGHT), m.to());
                 break;
             case Move.PC_BISHOP:
                 removePiece(m.from());
-                history[game_ply].captured = board[m.to()];
+                history[gamePly].captured = board[m.to()];
                 removePiece(m.to());
                 setPieceAt(Piece.makePiece(side_to_play, PieceType.BISHOP), m.to());
                 break;
             case Move.PC_ROOK:
                 removePiece(m.from());
-                history[game_ply].captured = board[m.to()];
+                history[gamePly].captured = board[m.to()];
                 removePiece(m.to());
                 setPieceAt(Piece.makePiece(side_to_play, PieceType.ROOK), m.to());
                 break;
             case Move.PC_QUEEN:
                 removePiece(m.from());
-                history[game_ply].captured = board[m.to()];
+                history[gamePly].captured = board[m.to()];
                 removePiece(m.to());
                 setPieceAt(Piece.makePiece(side_to_play, PieceType.QUEEN), m.to());
                 break;
             case Move.CAPTURE:
-                history[game_ply].captured = board[m.to()];
-                history[game_ply].halfmoveCounter = 0;
+                history[gamePly].captured = board[m.to()];
+                history[gamePly].halfmoveCounter = 0;
                 movePiece(m.from(), m.to());
                 break;
         }
-        history[game_ply].hash = hash();
-        history[game_ply].materialHash = materialHash;
+        history[gamePly].hash = hash();
+        history[gamePly].materialHash = materialHash;
         side_to_play = Side.flip(side_to_play);
         hash ^= Zobrist.SIDE;
     }
@@ -266,14 +335,14 @@ public class Board {
         side_to_play = Side.flip(side_to_play);
         hash ^= Zobrist.SIDE;
 
-        Move m = new Move(history[game_ply].move);
+        Move m = new Move(history[gamePly].move);
         switch (m.flags()){
             case Move.QUIET:
                 movePieceQuiet(m.to(), m.from());
                 break;
             case Move.DOUBLE_PUSH:
                 movePieceQuiet(m.to(), m.from());
-                hash ^= Zobrist.EN_PASSANT[Square.getFile(history[game_ply].epsq)];
+                hash ^= Zobrist.EN_PASSANT[Square.getFile(history[gamePly].epsq)];
                 break;
             case Move.OO:
                 if (side_to_play == Side.WHITE){
@@ -312,14 +381,14 @@ public class Board {
             case Move.PC_QUEEN:
                 removePiece(m.to());
                 setPieceAt(Piece.makePiece(side_to_play, PieceType.PAWN), m.from());
-                setPieceAt(history[game_ply].captured, m.to());
+                setPieceAt(history[gamePly].captured, m.to());
                 break;
             case Move.CAPTURE:
                 movePieceQuiet(m.to(), m.from());
-                setPieceAt(history[game_ply].captured, m.to());
+                setPieceAt(history[gamePly].captured, m.to());
                 break;
         }
-        game_ply--;
+        gamePly--;
         return m;
     }
 
@@ -382,13 +451,13 @@ public class Board {
     }
 
     public boolean isDraw(MoveList moves){
-        if (history[game_ply].halfmoveCounter >= 100 || (checkers == 0 && moves.size() == 0))
+        if (history[gamePly].halfmoveCounter >= 100 || (checkers == 0 && moves.size() == 0))
             return true;
 
-        final int lookBack = Math.min(history[game_ply].pliesFromNull, history[game_ply].halfmoveCounter);
+        final int lookBack = Math.min(history[gamePly].pliesFromNull, history[gamePly].halfmoveCounter);
         int rep = 0;
         for (int i = 2; i <= lookBack; i += 2){
-            if (materialHash == history[game_ply - i].materialHash
+            if (materialHash == history[gamePly - i].materialHash
             && ++rep >= 2) {
                 return true;
             }
@@ -478,10 +547,10 @@ public class Board {
                     case Piece.WHITE_PAWN:
                     case Piece.BLACK_PAWN:
                         // check to see if the checker is a pawn that can be captured ep
-                        if (checkers == Bitboard.shift(Square.getBb(history[game_ply].epsq), Square.relative_dir(Square.SOUTH, us))){
-                            b1 = Attacks.pawnAttacks(history[game_ply].epsq, them) & bitboardOf(us, PieceType.PAWN) & notPinned;
+                        if (checkers == Bitboard.shift(Square.getBb(history[gamePly].epsq), Square.relative_dir(Square.SOUTH, us))){
+                            b1 = Attacks.pawnAttacks(history[gamePly].epsq, them) & bitboardOf(us, PieceType.PAWN) & notPinned;
                             while (b1 != 0){
-                                moves.add(new Move(Bitboard.lsb(b1), history[game_ply].epsq, Move.EN_PASSANT));
+                                moves.add(new Move(Bitboard.lsb(b1), history[gamePly].epsq, Move.EN_PASSANT));
                                 b1 = Bitboard.extractLsb(b1);
                             }
                         }
@@ -510,26 +579,26 @@ public class Board {
                 // or move to any square that isn't occupied.
                 quietMask = ~all;
 
-                if (history[game_ply].epsq != Square.NO_SQUARE){
+                if (history[gamePly].epsq != Square.NO_SQUARE){
                     //b1 contains pawns that can do an ep capture
-                    b1 = Attacks.pawnAttacks(history[game_ply].epsq, them) & bitboardOf(us, PieceType.PAWN) & notPinned;
+                    b1 = Attacks.pawnAttacks(history[gamePly].epsq, them) & bitboardOf(us, PieceType.PAWN) & notPinned;
                     while (b1 != 0){
                         s = Bitboard.lsb(b1);
                         b1 = Bitboard.extractLsb(b1);
 
                         long attacks = Attacks.slidingAttacks(ourKing,
-                                all ^ Square.getBb(s) ^ Bitboard.shift(Square.getBb(history[game_ply].epsq), Square.relative_dir(Square.SOUTH, us)),
+                                all ^ Square.getBb(s) ^ Bitboard.shift(Square.getBb(history[gamePly].epsq), Square.relative_dir(Square.SOUTH, us)),
                                 Rank.getBb(Square.getRank(ourKing)));
 
                         if ((attacks & theirOrthSliders) == 0)
-                            moves.add(new Move(s, history[game_ply].epsq, Move.EN_PASSANT));
+                            moves.add(new Move(s, history[gamePly].epsq, Move.EN_PASSANT));
                     }
                 }
 
-                if (0 == ((history[game_ply].entry & Bitboard.ooMask(us)) | ((all | danger) & Bitboard.ooBlockersMask(us))))
+                if (0 == ((history[gamePly].entry & Bitboard.ooMask(us)) | ((all | danger) & Bitboard.ooBlockersMask(us))))
                     moves.add(us == Side.WHITE ? new Move(Square.E1, Square.G1, Move.OO) : new Move(Square.E8, Square.G8, Move.OO));
 
-                if (0 == ((history[game_ply].entry & Bitboard.oooMask(us)) |
+                if (0 == ((history[gamePly].entry & Bitboard.oooMask(us)) |
                         ((all | (danger & ~Bitboard.ignoreOOODanger(us))) & Bitboard.oooBlockersMask(us))))
                     moves.add(us == Side.WHITE ? new Move(Square.E1, Square.C1, Move.OOO) : new Move(Square.E8, Square.C8, Move.OOO));
 
@@ -642,10 +711,10 @@ public class Board {
                 s = Bitboard.lsb(b2);
                 b2 = Bitboard.extractLsb(b2);
 
+                moves.add(new Move(s - Square.relative_dir(Square.NORTH, us), s, Move.PR_QUEEN));
+                moves.add(new Move(s - Square.relative_dir(Square.NORTH, us), s, Move.PR_ROOK));
                 moves.add(new Move(s - Square.relative_dir(Square.NORTH, us), s, Move.PR_KNIGHT));
                 moves.add(new Move(s - Square.relative_dir(Square.NORTH, us), s, Move.PR_BISHOP));
-                moves.add(new Move(s - Square.relative_dir(Square.NORTH, us), s, Move.PR_ROOK));
-                moves.add(new Move(s - Square.relative_dir(Square.NORTH, us), s, Move.PR_QUEEN));
             }
 
             b2 = Bitboard.shift(b1, Square.relative_dir(Square.NORTH_WEST, us)) & captureMask;
@@ -655,20 +724,20 @@ public class Board {
                 s = Bitboard.lsb(b2);
                 b2 = Bitboard.extractLsb(b2);
 
+                moves.add(new Move(s - Square.relative_dir(Square.NORTH_WEST, us), s, Move.PC_QUEEN));
+                moves.add(new Move(s - Square.relative_dir(Square.NORTH_WEST, us), s, Move.PC_ROOK));
                 moves.add(new Move(s - Square.relative_dir(Square.NORTH_WEST, us), s, Move.PC_KNIGHT));
                 moves.add(new Move(s - Square.relative_dir(Square.NORTH_WEST, us), s, Move.PC_BISHOP));
-                moves.add(new Move(s - Square.relative_dir(Square.NORTH_WEST, us), s, Move.PC_ROOK));
-                moves.add(new Move(s - Square.relative_dir(Square.NORTH_WEST, us), s, Move.PC_QUEEN));
             }
 
             while (b3 != 0){
                 s = Bitboard.lsb(b3);
                 b3 = Bitboard.extractLsb(b3);
 
+                moves.add(new Move(s - Square.relative_dir(Square.NORTH_EAST, us), s, Move.PC_QUEEN));
+                moves.add(new Move(s - Square.relative_dir(Square.NORTH_EAST, us), s, Move.PC_ROOK));
                 moves.add(new Move(s - Square.relative_dir(Square.NORTH_EAST, us), s, Move.PC_KNIGHT));
                 moves.add(new Move(s - Square.relative_dir(Square.NORTH_EAST, us), s, Move.PC_BISHOP));
-                moves.add(new Move(s - Square.relative_dir(Square.NORTH_EAST, us), s, Move.PC_ROOK));
-                moves.add(new Move(s - Square.relative_dir(Square.NORTH_EAST, us), s, Move.PC_QUEEN));
             }
         }
         return moves;
@@ -750,10 +819,10 @@ public class Board {
                     case Piece.WHITE_PAWN:
                     case Piece.BLACK_PAWN:
                         // check to see if the checker is a pawn that can be captured ep
-                        if (checkers == Bitboard.shift(Square.getBb(history[game_ply].epsq), Square.relative_dir(Square.SOUTH, us))){
-                            b1 = Attacks.pawnAttacks(history[game_ply].epsq, them) & bitboardOf(us, PieceType.PAWN) & notPinned;
+                        if (checkers == Bitboard.shift(Square.getBb(history[gamePly].epsq), Square.relative_dir(Square.SOUTH, us))){
+                            b1 = Attacks.pawnAttacks(history[gamePly].epsq, them) & bitboardOf(us, PieceType.PAWN) & notPinned;
                             while (b1 != 0){
-                                moves.add(new Move(Bitboard.lsb(b1), history[game_ply].epsq, Move.EN_PASSANT));
+                                moves.add(new Move(Bitboard.lsb(b1), history[gamePly].epsq, Move.EN_PASSANT));
                                 b1 = Bitboard.extractLsb(b1);
                             }
                         }
@@ -782,19 +851,19 @@ public class Board {
                 // or move to any square that isn't occupied.
                 quietMask = ~all;
 
-                if (history[game_ply].epsq != Square.NO_SQUARE){
+                if (history[gamePly].epsq != Square.NO_SQUARE){
                     //b1 contains pawns that can do an ep capture
-                    b1 = Attacks.pawnAttacks(history[game_ply].epsq, them) & bitboardOf(us, PieceType.PAWN) & notPinned;
+                    b1 = Attacks.pawnAttacks(history[gamePly].epsq, them) & bitboardOf(us, PieceType.PAWN) & notPinned;
                     while (b1 != 0){
                         s = Bitboard.lsb(b1);
                         b1 = Bitboard.extractLsb(b1);
 
                         long attacks = Attacks.slidingAttacks(ourKing,
-                                all ^ Square.getBb(s) ^ Bitboard.shift(Square.getBb(history[game_ply].epsq), Square.relative_dir(Square.SOUTH, us)),
+                                all ^ Square.getBb(s) ^ Bitboard.shift(Square.getBb(history[gamePly].epsq), Square.relative_dir(Square.SOUTH, us)),
                                 Rank.getBb(Square.getRank(ourKing)));
 
                         if ((attacks & theirOrthSliders) == 0)
-                            moves.add(new Move(s, history[game_ply].epsq, Move.EN_PASSANT));
+                            moves.add(new Move(s, history[gamePly].epsq, Move.EN_PASSANT));
                     }
                 }
 
@@ -878,10 +947,11 @@ public class Board {
                 s = Bitboard.lsb(b2);
                 b2 = Bitboard.extractLsb(b2);
 
+                moves.add(new Move(s - Square.relative_dir(Square.NORTH, us), s, Move.PR_QUEEN));
+                moves.add(new Move(s - Square.relative_dir(Square.NORTH, us), s, Move.PR_ROOK));
                 moves.add(new Move(s - Square.relative_dir(Square.NORTH, us), s, Move.PR_KNIGHT));
                 moves.add(new Move(s - Square.relative_dir(Square.NORTH, us), s, Move.PR_BISHOP));
-                moves.add(new Move(s - Square.relative_dir(Square.NORTH, us), s, Move.PR_ROOK));
-                moves.add(new Move(s - Square.relative_dir(Square.NORTH, us), s, Move.PR_QUEEN));
+
             }
 
             b2 = Bitboard.shift(b1, Square.relative_dir(Square.NORTH_WEST, us)) & captureMask;
@@ -891,24 +961,42 @@ public class Board {
                 s = Bitboard.lsb(b2);
                 b2 = Bitboard.extractLsb(b2);
 
+                moves.add(new Move(s - Square.relative_dir(Square.NORTH_WEST, us), s, Move.PC_QUEEN));
+                moves.add(new Move(s - Square.relative_dir(Square.NORTH_WEST, us), s, Move.PC_ROOK));
                 moves.add(new Move(s - Square.relative_dir(Square.NORTH_WEST, us), s, Move.PC_KNIGHT));
                 moves.add(new Move(s - Square.relative_dir(Square.NORTH_WEST, us), s, Move.PC_BISHOP));
-                moves.add(new Move(s - Square.relative_dir(Square.NORTH_WEST, us), s, Move.PC_ROOK));
-                moves.add(new Move(s - Square.relative_dir(Square.NORTH_WEST, us), s, Move.PC_QUEEN));
+
             }
 
             while (b3 != 0){
                 s = Bitboard.lsb(b3);
                 b3 = Bitboard.extractLsb(b3);
 
+                moves.add(new Move(s - Square.relative_dir(Square.NORTH_EAST, us), s, Move.PC_QUEEN));
+                moves.add(new Move(s - Square.relative_dir(Square.NORTH_EAST, us), s, Move.PC_ROOK));
                 moves.add(new Move(s - Square.relative_dir(Square.NORTH_EAST, us), s, Move.PC_KNIGHT));
                 moves.add(new Move(s - Square.relative_dir(Square.NORTH_EAST, us), s, Move.PC_BISHOP));
-                moves.add(new Move(s - Square.relative_dir(Square.NORTH_EAST, us), s, Move.PC_ROOK));
-                moves.add(new Move(s - Square.relative_dir(Square.NORTH_EAST, us), s, Move.PC_QUEEN));
+
             }
         }
 
         return moves;
+    }
+
+    public int gamePly(){
+        return gamePly;
+    }
+
+    public Score materialScore(){
+        return materialScore;
+    }
+
+    public Score pSqScore(){
+        return pSqScore;
+    }
+
+    public int phase(){
+        return phase;
     }
 
     public void setFen(String fen){
@@ -967,7 +1055,7 @@ public class Board {
         if (flags.length >= 3){
             String s = flags[2].toLowerCase().trim();
             if (!s.equals("-")){
-                history[game_ply].epsq = Square.getSquareFromName(s);
+                history[gamePly].epsq = Square.getSquareFromName(s);
                 hash ^= Zobrist.EN_PASSANT[Square.getFile(Square.getSquareFromName(s))];
             }
         }
@@ -1013,13 +1101,13 @@ public class Board {
         }
 
         String rights = "";
-        if ((Bitboard.ooMask(Side.WHITE) & history[game_ply].entry) != 0)
+        if ((Bitboard.ooMask(Side.WHITE) & history[gamePly].entry) != 0)
             rights += "K";
-        if((Bitboard.oooMask(Side.WHITE) & history[game_ply].entry) != 0)
+        if((Bitboard.oooMask(Side.WHITE) & history[gamePly].entry) != 0)
             rights += "Q";
-        if((Bitboard.ooMask(Side.BLACK) & history[game_ply].entry) != 0)
+        if((Bitboard.ooMask(Side.BLACK) & history[gamePly].entry) != 0)
             rights += "k";
-        if((Bitboard.oooMask(Side.BLACK) & history[game_ply].entry) != 0)
+        if((Bitboard.oooMask(Side.BLACK) & history[gamePly].entry) != 0)
             rights += "q";
 
         if (rights.equals("")){
@@ -1029,8 +1117,8 @@ public class Board {
             fen.append(" ").append(rights);
         }
 
-        if (history[game_ply].epsq != Square.NO_SQUARE)
-            fen.append(" ").append(Square.getName(history[game_ply].epsq));
+        if (history[gamePly].epsq != Square.NO_SQUARE)
+            fen.append(" ").append(Square.getName(history[gamePly].epsq));
         else
             fen.append(" -");
 
@@ -1067,7 +1155,7 @@ public class Board {
             else if (typeStr.equals("r"))
                 move = new Move(fromSq, toSq, Move.PR_ROOK);
             else if ( Piece.typeOf(board[fromSq]) == PieceType.PAWN &&
-                    toSq == history[game_ply].epsq)
+                    toSq == history[gamePly].epsq)
                 move = new Move(fromSq, toSq, Move.EN_PASSANT);
             else if (Piece.typeOf(board[fromSq]) == PieceType.PAWN && Math.abs(fromSq - toSq) == 16)
                 move = new Move(fromSq, toSq, Move.DOUBLE_PUSH);

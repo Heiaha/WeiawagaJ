@@ -3,7 +3,7 @@ import movegen.*;
 
 public class Search {
     final public static int MAX_SEARCH_DEPTH = 25;
-    final public static int INF = 99999;
+    final public static int INF = 999999;
     private static boolean stop;
     private static Move IDMove = null;
     private static int IDScore = -INF;
@@ -17,13 +17,12 @@ public class Search {
     public Search(){}
 
     public static void itDeep(Board board){
-        Limits.calcTime(board.getSideToPlay(), board.game_ply);
+        Limits.calcTime(board.getSideToPlay(), board.gamePly());
         Limits.startTime = System.currentTimeMillis();
-        int searchDepth = MAX_SEARCH_DEPTH;
         IDMove = null;
         IDScore = -INF;
         stop = false;
-        for (int depth = 1; depth <= searchDepth; depth++) {
+        for (int depth = 1; depth <= MAX_SEARCH_DEPTH; depth++) {
             negaMaxRoot(board, depth);
             System.out.print("info");
             System.out.print(" currmove " + IDMove.uci());
@@ -226,7 +225,7 @@ public class Search {
     }
 
     public static boolean canApplyNullWindow(Board board, int depth, boolean pV){
-        return !pV && depth >= NullMinDepth && !board.kingAttacked();
+        return !pV && depth >= NullMinDepth && board.phase() >= 12 && !board.kingAttacked();
     }
 
     public static boolean canApplyLMR(Board board, int depth, Move move, int moveIndex, boolean fromCheck){
