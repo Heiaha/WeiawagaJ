@@ -2,17 +2,19 @@ package mind;
 import movegen.*;
 
 public class Search {
-    final public static int MAX_SEARCH_DEPTH = 25;
-    final public static int INF = 999999;
-    private static boolean stop;
-    private static Move IDMove = null;
-    private static int IDScore = -INF;
+    public static int maxSearchDepth;
+    public static boolean waitForStop;
 
     private final static int NullMinDepth = 5;
     private final static int LMRMinDepth = 2;
     private final static int LMRMoveWOReduction = 3;
     private final static int LMRPVReduction = 1;
     private final static int LMRNonPVDiv = 3;
+    private final static int INF = 999999;
+
+    private static boolean stop;
+    private static Move IDMove = null;
+    private static int IDScore = -INF;
 
     public Search(){}
 
@@ -22,15 +24,16 @@ public class Search {
         IDMove = null;
         IDScore = -INF;
         stop = false;
-        for (int depth = 1; depth <= MAX_SEARCH_DEPTH; depth++) {
+        for (int depth = 1; depth <= maxSearchDepth || waitForStop; depth++) {
             negaMaxRoot(board, depth);
+            long elapsed = System.currentTimeMillis() - Limits.startTime;
             System.out.print("info");
             System.out.print(" currmove " + IDMove.uci());
             System.out.print(" depth " + depth);
             System.out.print(" score cp " + IDScore);
             System.out.println(" nodes " + Statistics.totalNodes());
             Statistics.reset();
-            long elapsed = System.currentTimeMillis() - Limits.startTime;
+
             if (stop || elapsed >= Limits.timeAllocated/2 || isScoreCheckmate(IDScore))
                 break;
         }

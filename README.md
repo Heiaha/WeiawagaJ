@@ -24,10 +24,11 @@ https://lichess.org/@/Weiawaga
     - [Bishop pairs](https://www.chessprogramming.org/Bishop_Pair)
     - [Evaluation tapering](https://www.chessprogramming.org/Tapered_Eval)
     - [Mobility](https://www.chessprogramming.org/Mobility)
+    - [Rooks on open file](https://www.chessprogramming.org/Rook_on_Open_File)
   - Move ordering
     - [Hash move](https://www.chessprogramming.org/Hash_Move)
     - [MVV/LVA](https://www.chessprogramming.org/MVV-LVA)
-    - [Killer Move Heuristic](https://www.chessprogramming.org/Killer_Heuristic)
-    - [History Heuristic](https://www.chessprogramming.org/History_Heuristic)
+    - [Killer heuristic](https://www.chessprogramming.org/Killer_Heuristic)
+    - [History heuristic](https://www.chessprogramming.org/History_Heuristic)
   - Other
     - [Zobrist hashing](https://www.chessprogramming.org/Zobrist_Hashing) / [Transposition table](https://en.wikipedia.org/wiki/Transposition_table)

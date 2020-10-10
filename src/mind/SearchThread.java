@@ -3,13 +3,12 @@ import movegen.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SearchThread implements Runnable {
-    private Thread worker;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private Board board;
 
     public void startSearch(Board board){
         this.board = board;
-        worker = new Thread(this);
+        Thread worker = new Thread(this);
         worker.start();
     }
 
@@ -23,6 +22,7 @@ public class SearchThread implements Runnable {
         MoveOrder.clearHistory();
         System.gc();
         Limits.resetTime();
+        running.set(false);
     }
 
     public Move getMove(){
@@ -35,6 +35,7 @@ public class SearchThread implements Runnable {
 
     public void stop(){
         Search.stop();
+        Search.waitForStop = false;
         running.set(false);
     }
 }

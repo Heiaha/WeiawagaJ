@@ -32,6 +32,8 @@ public class Evaluation {
 
     //rook scoring
     final static Score KING_TRAPPING_ROOK_PENALTY = new Score(-25, 0);
+    final static Score ROOK_ON_OPEN_FILE = new Score(20, 0);
+    final static Score ROOK_ON_SEMIOPEN_FILE = new Score(10, 0);
 
     //bishop scoring
     final static Score BISHOP_SAME_COLOR_PAWN_PENALTY = new Score(-3, -7); // per pawn
@@ -239,6 +241,7 @@ public class Evaluation {
         Score score = new Score();
 
         // check for rooks on the 7th
+        long ourPawns = board.bitboardOf(side, PieceType.PAWN);
         long enemyPawns = board.bitboardOf(Side.flip(side), PieceType.PAWN);
         long sevBb = File.getBb(Rank.relative_rank(7, side));
         if ((sevBb & enemyPawns & rooksBb) != 0)
@@ -247,6 +250,14 @@ public class Evaluation {
         while (rooksBb != 0){
             sq = Bitboard.lsb(rooksBb);
             rooksBb = Bitboard.extractLsb(rooksBb);
+
+            long rookFileBb = Square.getFileBb(sq);
+            if ((ourPawns & rookFileBb) == 0){
+                if ((enemyPawns & rookFileBb) == 0)
+                    score.add(ROOK_ON_OPEN_FILE);
+                else
+                    score.add(ROOK_ON_SEMIOPEN_FILE);
+            }
 
             pieceMobility = Bitboard.popcount(Attacks.getRookAttacks(sq, allPieces) & ~allPieces);
             mobility += pieceMobility;

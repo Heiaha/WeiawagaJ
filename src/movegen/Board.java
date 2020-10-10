@@ -12,8 +12,8 @@ public class Board {
     private int gamePly;
 
     private int phase = 24;
-    private final Score materialScore = new Score(0, 0);
-    private final Score pSqScore = new Score(0, 0);
+    private Score materialScore = new Score(0, 0);
+    private Score pSqScore = new Score(0, 0);
     private UndoInfo[] history = new UndoInfo[1000];
 
     private long checkers;
@@ -32,6 +32,10 @@ public class Board {
     }
 
     public void clear(){
+        phase = 24;
+        pSqScore = new Score(0, 0);
+        materialScore = new Score(0, 0);
+        history = new UndoInfo[1000];
         side_to_play = Side.WHITE;
         gamePly = 0;
         for (int piece = 0; piece < Piece.NPIECES; piece++)
@@ -1002,9 +1006,8 @@ public class Board {
     public void setFen(String fen){
         clear();
         history[0] = new UndoInfo();
-        String squares = fen.substring(0, fen.indexOf(' '));
-        String state = fen.substring(fen.indexOf(' ') + 1);
-
+        String squares = fen.substring(0, fen.indexOf(" "));
+        String state = fen.substring(fen.indexOf(" ") + 1);
         String[] ranks = squares.split("/");
         int file;
         int rank = 7;
@@ -1017,25 +1020,24 @@ public class Board {
                 } else {
                     int sq = Square.encode(rank, file);
                     switch (c) {
-                        case 'P' -> setPieceAt(Piece.WHITE_PAWN, sq);
-                        case 'N' -> setPieceAt(Piece.WHITE_KNIGHT, sq);
-                        case 'B' -> setPieceAt(Piece.WHITE_BISHOP, sq);
-                        case 'R' -> setPieceAt(Piece.WHITE_ROOK, sq);
-                        case 'Q' -> setPieceAt(Piece.WHITE_QUEEN, sq);
-                        case 'K' -> setPieceAt(Piece.WHITE_KING, sq);
-                        case 'p' -> setPieceAt(Piece.BLACK_PAWN, sq);
-                        case 'n' -> setPieceAt(Piece.BLACK_KNIGHT, sq);
-                        case 'b' -> setPieceAt(Piece.BLACK_BISHOP, sq);
-                        case 'r' -> setPieceAt(Piece.BLACK_ROOK, sq);
-                        case 'q' -> setPieceAt(Piece.BLACK_QUEEN, sq);
-                        case 'k' -> setPieceAt(Piece.BLACK_KING, sq);
+                        case 'P' -> this.setPieceAt(Piece.WHITE_PAWN, sq);
+                        case 'N' -> this.setPieceAt(Piece.WHITE_KNIGHT, sq);
+                        case 'B' -> this.setPieceAt(Piece.WHITE_BISHOP, sq);
+                        case 'R' -> this.setPieceAt(Piece.WHITE_ROOK, sq);
+                        case 'Q' -> this.setPieceAt(Piece.WHITE_QUEEN, sq);
+                        case 'K' -> this.setPieceAt(Piece.WHITE_KING, sq);
+                        case 'p' -> this.setPieceAt(Piece.BLACK_PAWN, sq);
+                        case 'n' -> this.setPieceAt(Piece.BLACK_KNIGHT, sq);
+                        case 'b' -> this.setPieceAt(Piece.BLACK_BISHOP, sq);
+                        case 'r' -> this.setPieceAt(Piece.BLACK_ROOK, sq);
+                        case 'q' -> this.setPieceAt(Piece.BLACK_QUEEN, sq);
+                        case 'k' -> this.setPieceAt(Piece.BLACK_KING, sq);
                     }
                     file++;
                 }
             }
             rank--;
         }
-
         String[] flags = state.split(" ");
 
         side_to_play = state.toLowerCase().charAt(0) == 'w' ? Side.WHITE : Side.BLACK;
@@ -1059,6 +1061,7 @@ public class Board {
                 hash ^= Zobrist.EN_PASSANT[Square.getFile(Square.getSquareFromName(s))];
             }
         }
+
     }
 
     public String getFen(){

@@ -82,8 +82,10 @@ public class Square {
     }
 
     public static long getFileBb(int square){
-        return File.getBb(square % 8);
+        return File.getBb(square & 7);
     }
+
+    public static long getAdjacentFileBb(int square){ return File.getAdjacentBb(square & 7 ); }
 
     public static int getDiagonal(int square){
         return 7 + getRank(square) - getFile(square);

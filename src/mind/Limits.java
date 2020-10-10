@@ -38,6 +38,10 @@ public class Limits {
         timeAllocated = (long)(ourTime*timeRatio*phaseFactor/30.0 + increment[activeSide] - overhead);
     }
 
+    public static void setTime(long time){
+        timeAllocated = time;
+    }
+
     public static void resetTime(){
         time[Side.WHITE] = Long.MAX_VALUE;
         time[Side.BLACK] = Long.MAX_VALUE;
