@@ -13,8 +13,15 @@ public class File {
         return BB_FILES[file];
     }
 
+    public static int relativeFile(int file, int side){
+        return side == Side.WHITE ? file : FILE_H - file;
+    }
+
     public static long getAdjacentBb(int file){
         return BB_ADJACENT[file];
     }
 
+    public  static long forwardFileBb(int side, int sq){
+        return Rank.forwardRanksBb(side, sq) & Square.getFileBb(sq);
+    }
 }

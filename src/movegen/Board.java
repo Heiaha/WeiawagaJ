@@ -31,6 +31,11 @@ public class Board {
         }
     }
 
+    public void reset(){
+        this.clear();
+        this.setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    }
+
     public void clear(){
         phase = 24;
         pSqScore = new Score(0, 0);
@@ -623,7 +628,7 @@ public class Board {
                     s = Bitboard.lsb(b1);
                     b1 = Bitboard.extractLsb(b1);
 
-                    if (Square.getRank(s) == Rank.relative_rank(Rank.RANK_7, us)){
+                    if (Square.getRank(s) == Rank.relativeRank(Rank.RANK_7, us)){
                         b2 = Attacks.pawnAttacks(s, us) & captureMask & Bitboard.line(ourKing, s);
                         moves.makePC(s, b2);
                     }
@@ -633,7 +638,7 @@ public class Board {
 
                         //single pawn pushes
                         b2 = Bitboard.shift(Square.getBb(s), Square.relative_dir(Square.NORTH, us)) & ~all & Bitboard.line(ourKing, s);
-                        b3 = Bitboard.shift(b2 & Rank.getBb(Rank.relative_rank(Rank.RANK_3, us)), Square.relative_dir(Square.NORTH, us)) & ~all & Bitboard.line(ourKing, s);
+                        b3 = Bitboard.shift(b2 & Rank.getBb(Rank.relativeRank(Rank.RANK_3, us)), Square.relative_dir(Square.NORTH, us)) & ~all & Bitboard.line(ourKing, s);
 
                         moves.makeQ(s, b2);
                         moves.makeDP(s, b3);
@@ -671,13 +676,13 @@ public class Board {
             moves.makeQ(s, b2 & quietMask);
         }
 
-        b1 = bitboardOf(us, PieceType.PAWN) & notPinned & ~Rank.getBb(Rank.relative_rank(Rank.RANK_7, us));
+        b1 = bitboardOf(us, PieceType.PAWN) & notPinned & ~Rank.getBb(Rank.relativeRank(Rank.RANK_7, us));
 
         // single pawn pushes
         b2 = Bitboard.shift(b1, Square.relative_dir(Square.NORTH, us)) & ~all;
 
         //double pawn pushes
-        b3 = Bitboard.shift(b2 & Rank.getBb(Rank.relative_rank(Rank.RANK_3, us)), Square.relative_dir(Square.NORTH, us)) & quietMask;
+        b3 = Bitboard.shift(b2 & Rank.getBb(Rank.relativeRank(Rank.RANK_3, us)), Square.relative_dir(Square.NORTH, us)) & quietMask;
 
         b2 &= quietMask;
 
@@ -708,7 +713,7 @@ public class Board {
             moves.add(new Move(s - Square.relative_dir(Square.NORTH_EAST, us), s, Move.CAPTURE));
         }
 
-        b1 = bitboardOf(us, PieceType.PAWN) & notPinned & Rank.getBb(Rank.relative_rank(Rank.RANK_7, us));
+        b1 = bitboardOf(us, PieceType.PAWN) & notPinned & Rank.getBb(Rank.relativeRank(Rank.RANK_7, us));
         if (b1 != 0){
             b2 = Bitboard.shift(b1, Square.relative_dir(Square.NORTH, us)) & quietMask;
             while (b2 != 0){
@@ -888,7 +893,7 @@ public class Board {
                     s = Bitboard.lsb(b1);
                     b1 = Bitboard.extractLsb(b1);
 
-                    if (Square.getRank(s) == Rank.relative_rank(Rank.RANK_7, us)){
+                    if (Square.getRank(s) == Rank.relativeRank(Rank.RANK_7, us)){
                         b2 = Attacks.pawnAttacks(s, us) & captureMask & Bitboard.line(ourKing, s);
                         moves.makePC(s, b2);
                     }
@@ -928,7 +933,7 @@ public class Board {
             moves.makeC(s, b2 & captureMask);
         }
 
-        b1 = bitboardOf(us, PieceType.PAWN) & notPinned & ~Rank.getBb(Rank.relative_rank(Rank.RANK_7, us));
+        b1 = bitboardOf(us, PieceType.PAWN) & notPinned & ~Rank.getBb(Rank.relativeRank(Rank.RANK_7, us));
         b2 = Bitboard.shift(b1, Square.relative_dir(Square.NORTH_WEST, us)) & captureMask;
         b3 = Bitboard.shift(b1, Square.relative_dir(Square.NORTH_EAST, us)) & captureMask;
 
@@ -944,7 +949,7 @@ public class Board {
             moves.add(new Move(s - Square.relative_dir(Square.NORTH_EAST, us), s, Move.CAPTURE));
         }
 
-        b1 = bitboardOf(us, PieceType.PAWN) & notPinned & Rank.getBb(Rank.relative_rank(Rank.RANK_7, us));
+        b1 = bitboardOf(us, PieceType.PAWN) & notPinned & Rank.getBb(Rank.relativeRank(Rank.RANK_7, us));
         if (b1 != 0){
             b2 = Bitboard.shift(b1, Square.relative_dir(Square.NORTH, us)) & quietMask;
             while (b2 != 0){

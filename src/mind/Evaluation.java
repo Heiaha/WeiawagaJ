@@ -31,7 +31,7 @@ public class Evaluation {
     final static Score KING_PAWN_SHIELD_BONUS = new Score(10, 0);
 
     //rook scoring
-    final static Score KING_TRAPPING_ROOK_PENALTY = new Score(-25, 0);
+    final static Score KING_TRAPPING_ROOK_PENALTY = new Score(-50, -50);
     final static Score ROOK_ON_OPEN_FILE = new Score(20, 0);
     final static Score ROOK_ON_SEMIOPEN_FILE = new Score(10, 0);
 
@@ -39,13 +39,12 @@ public class Evaluation {
     final static Score BISHOP_SAME_COLOR_PAWN_PENALTY = new Score(-3, -7); // per pawn
     final static Score BISHOP_ATTACKS_CENTER = new Score(30, 40);
     final static Score BISHOP_PAIR_VALUE = new Score(50, 50);
+    final static Score BISHOP_TRAPPED_PENALTY = new Score(-100, -100);
+    final static Score BISHOP_BLOCKED_PENALTY = new Score(-50, -50);
 
     //7th
     final static Score ROOK_ON_7TH = new Score(20, 40);
     final static Score QUEEN_ON_7TH = new Score(10, 20);
-
-    //Queen dist from king
-    final static int QUEEN_DIST_FROM_KING_INIT = 10;
 
     public final static int[] KNIGHT_OUTPOST_SCORE = {
             0, 0, 0,  0,  0, 0, 0, 0,
@@ -188,13 +187,11 @@ public class Evaluation {
 
     public static Score knightScore(Board board, int side){
         long knightBb = board.bitboardOf(side, PieceType.KNIGHT);
-        long attacks;
-        int sq;
         int mobility = 0;
         Score score = new Score();
 
         while (knightBb != 0){
-            sq = Bitboard.lsb(knightBb);
+            int sq = Bitboard.lsb(knightBb);
             knightBb = Bitboard.extractLsb(knightBb);
             mobility += Bitboard.popcount(Attacks.getKnightAttacks(sq) & ~allPieces);
 
@@ -212,18 +209,37 @@ public class Evaluation {
 
     public static Score bishopScore(Board board, int side){
         long bishopsBb = board.bitboardOf(side, PieceType.BISHOP);
-        int sq;
-        long attacks;
         int mobility = 0;
         Score score = new Score();
         if (hasBishopPair(bishopsBb))
             score.add(BISHOP_PAIR_VALUE);
 
         while (bishopsBb != 0) {
-            sq = Bitboard.lsb(bishopsBb);
+            int sq = Bitboard.lsb(bishopsBb);
             bishopsBb = Bitboard.extractLsb(bishopsBb);
-            attacks = Attacks.getBishopAttacks(sq, allPieces) & ~allPieces;
-            mobility += Bitboard.popcount(attacks);
+            long attacks = Attacks.getBishopAttacks(sq, allPieces) & ~allPieces;
+            int pieceMobility = Bitboard.popcount(attacks);
+            mobility += pieceMobility;
+
+            if (pieceMobility <= 2){
+                int relRank = Rank.relativeRank(Square.getRank(sq), side);
+
+                // check if bishop is trapped on opposition side by a pawn.
+                if (relRank >= Rank.RANK_6) {
+                    int trappingDir = (File.relativeFile(Square.getFile(sq), side) > File.FILE_E) ? Square.SOUTH_WEST : Square.SOUTH_EAST;
+                    if (board.pieceAt(sq + Square.relative_dir(trappingDir, side)) == Piece.makePiece(Side.flip(side), PieceType.PAWN))
+                        score.add(BISHOP_TRAPPED_PENALTY);
+                }
+                // check if the bishop is blocked on the first rank by its own pieces
+                else if (relRank == Rank.RANK_1){
+                    int blockingDir = (File.relativeFile(Square.getFile(sq), side) > File.FILE_E) ? Square.NORTH_WEST : Square.NORTH_EAST;
+                    int pawnSquare = sq + Square.relative_dir(blockingDir, side);
+                    if (board.pieceAt(pawnSquare) == Piece.makePiece(side, PieceType.PAWN)
+                        && (Square.getBb(pawnSquare + Square.relative_dir(Square.NORTH, side)) & allPieces) != 0)
+                        score.add(BISHOP_BLOCKED_PENALTY);
+                }
+            }
+
             if (Bitboard.popcount(attacks & Bitboard.CENTER) == 2)
                 score.add(BISHOP_ATTACKS_CENTER);
             score.add(BISHOP_SAME_COLOR_PAWN_PENALTY, pawnsOnSameColorSquare(board, sq, side));
@@ -235,20 +251,18 @@ public class Evaluation {
     public static Score rookScore(Board board, int side){
         long rooksBb = board.bitboardOf(side, PieceType.ROOK);
         int ourKingSq = side == Side.WHITE ? whiteKingSq : blackKingSq;
-        int sq;
         int mobility = 0;
-        int pieceMobility;
         Score score = new Score();
 
         // check for rooks on the 7th
         long ourPawns = board.bitboardOf(side, PieceType.PAWN);
         long enemyPawns = board.bitboardOf(Side.flip(side), PieceType.PAWN);
-        long sevBb = File.getBb(Rank.relative_rank(7, side));
+        long sevBb = Rank.getBb(Rank.relativeRank(Rank.RANK_7, side));
         if ((sevBb & enemyPawns & rooksBb) != 0)
             score.add(ROOK_ON_7TH);
 
         while (rooksBb != 0){
-            sq = Bitboard.lsb(rooksBb);
+            int sq = Bitboard.lsb(rooksBb);
             rooksBb = Bitboard.extractLsb(rooksBb);
 
             long rookFileBb = Square.getFileBb(sq);
@@ -259,7 +273,7 @@ public class Evaluation {
                     score.add(ROOK_ON_SEMIOPEN_FILE);
             }
 
-            pieceMobility = Bitboard.popcount(Attacks.getRookAttacks(sq, allPieces) & ~allPieces);
+            int pieceMobility = Bitboard.popcount(Attacks.getRookAttacks(sq, allPieces) & ~allPieces);
             mobility += pieceMobility;
 
             // check to see if the king has trapped a rook
@@ -278,7 +292,8 @@ public class Evaluation {
         Score score = new Score();
 
         long enemyPawns = board.bitboardOf(Side.flip(side), PieceType.PAWN);
-        long sevBb = File.getBb(Rank.relative_rank(7, side));
+        long sevBb = Rank.getBb(Rank.relativeRank(Rank.RANK_7, side));
+
         if ((sevBb & enemyPawns & queensBb) != 0)
             score.add(QUEEN_ON_7TH);
         return score;

@@ -46,6 +46,8 @@ public class UCIClient {
             } else if (input.equals(STOP)) {
                 thread.stop();
             }
+            else if (input.equals("evaluate"))
+                System.out.println(Evaluation.evaluateState(board));
         }
     }
 

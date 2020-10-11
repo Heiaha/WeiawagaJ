@@ -10,8 +10,13 @@ public class Rank {
         return BB_RANKS[rank];
     }
 
-    public static int relative_rank(int rank, int side){
+    public static int relativeRank(int rank, int side){
         return side == Side.WHITE ? rank : Rank.RANK_8 - rank;
+    }
+
+    public static long forwardRanksBb(int sq, int side){
+        return side == Side.WHITE ? ~BB_RANKS[RANK_1] << 8 * relativeRank(Square.getRank(sq), side)
+                                  : ~BB_RANKS[RANK_8] >>> 8 * relativeRank(Square.getRank(sq), side);
     }
 
 
