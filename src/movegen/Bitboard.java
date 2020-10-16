@@ -18,12 +18,14 @@ public class Bitboard {
     private final static long WHITE_OO_BLOCKERS_AND_ATTACKERS_MASK = 0x60L;
     private final static long WHITE_OOO_BLOCKERS_AND_ATTACKERS_MASK = 0xeL;
 
-    private final static long BLACK_OO_MASK = 0x9000000000000000L;
+    public final static long BLACK_OO_MASK = 0x9000000000000000L;
     private final static long BLACK_OOO_MASK = 0x1100000000000000L;
 
     private final static long BLACK_OO_BLOCKERS_AND_ATTACKERS_MASK = 0x6000000000000000L;
     private final static long BLACK_OOO_BLOCKERS_AND_ATTACKERS_MASK = 0xE00000000000000L;
     private final static long ALL_CASTLING_MASK = 0x9100000000000091L;
+
+    public static final long CENTER = 0x1818000000L;
 
 
     public final static long[][] BB_RAYS = new long[8][64];
@@ -96,9 +98,6 @@ public class Bitboard {
         return BB_LINES[sq1][sq2];
     }
 
-    public static final long CENTER = 0x1818000000L;
-
-
     public static long ooMask(int side){
         return side == Side.WHITE ? WHITE_OO_MASK : BLACK_OO_MASK;
     }
@@ -137,7 +136,7 @@ public class Bitboard {
         return Long.bitCount(bb);
     }
 
-    public static long shift (long bb, int direction){
+    public static long shift(long bb, int direction){
         return switch (direction) {
             case Square.NORTH -> bb << 8;
             case Square.SOUTH -> bb >>> 8;

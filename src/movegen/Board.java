@@ -225,7 +225,7 @@ public class Board {
         gamePly++;
         history[gamePly] = new UndoInfo();
         history[gamePly].entry = history[gamePly - 1].entry;
-        history[gamePly].halfmoveCounter = history[gamePly].halfmoveCounter + 1;
+        history[gamePly].halfmoveCounter = history[gamePly - 1].halfmoveCounter + 1;
         history[gamePly].pliesFromNull = 0;
         history[gamePly].hash = history[gamePly - 1].hash;
         history[gamePly].materialHash = history[gamePly - 1].materialHash;

@@ -231,7 +231,7 @@ public class Evaluation {
                         score.add(BISHOP_TRAPPED_PENALTY);
                 }
                 // check if the bishop is blocked on the first rank by its own pieces
-                else if (relRank == Rank.RANK_1){
+                else if (relRank == Rank.RANK_1) {
                     int blockingDir = (File.relativeFile(Square.getFile(sq), side) > File.FILE_E) ? Square.NORTH_WEST : Square.NORTH_EAST;
                     int pawnSquare = sq + Square.relative_dir(blockingDir, side);
                     if (board.pieceAt(pawnSquare) == Piece.makePiece(side, PieceType.PAWN)
