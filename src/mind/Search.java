@@ -25,7 +25,7 @@ public class Search {
         IDScore = -INF;
         stop = false;
         for (int depth = 1; depth <= maxSearchDepth || waitForStop; depth++) {
-            pvSearchRoot(board, depth);
+            negaMaxRoot(board, depth);
             long elapsed = System.currentTimeMillis() - Limits.startTime;
             System.out.print("info");
             System.out.print(" currmove " + IDMove.uci());
@@ -39,7 +39,7 @@ public class Search {
         }
     }
 
-    public static void pvSearchRoot(Board board, int depth){
+    public static void negaMaxRoot(Board board, int depth){
         int alpha = -INF;
         int beta = INF;
         MoveList moves = board.generateLegalMoves();
@@ -49,44 +49,24 @@ public class Search {
         }
 
         moves = MoveOrder.moveOrdering(board, moves, 0);
-        boolean inCheck = board.checkers() != 0;
-        boolean pVS = true;
-        int moveIndex = 0;
-        Move bestMove = null;
         int value;
+        Move bestMove = null;
         for (Move move : moves){
             board.push(move);
-            if (pVS) {
-                value = -pVSearch(board, depth - 1, 1, -beta, -alpha, true, false);
-                pVS = false;
-            }
-            else {
-                int reducedDepth = depth;
-                if (canApplyLMR(board, depth, move, moveIndex, inCheck))
-                    reducedDepth = LMRReducedDepth(depth, false);
-                value = -pVSearch(board, reducedDepth - 1, 1, -alpha - 1, -alpha, false, true);
-                if (value > alpha)
-                    value = -pVSearch(board, depth - 1, 1,  -beta, -alpha, false, true);
-            }
+            value = -pVSearch(board, depth - 1, 1, -beta, -alpha, true, true);
             board.pop();
             if (stop || Limits.checkLimits()) {
                 stop = true;
                 break;
             }
-
-            if (value >= beta){
-                if (move.flags() == Move.QUIET) {
-                    MoveOrder.addHistory(board, move, depth);
-                }
-                Statistics.betaCutoffs++;
-                break;
-            }
-            if (value > alpha) {
-                bestMove = move;
+            if (value > alpha){
                 alpha = value;
+                bestMove = move;
             }
-            moveIndex++;
         }
+        if (bestMove == null)
+            bestMove = moves.get(0);
+
         if (!stop) {
             TranspTable.set(board.hash(), alpha, depth, TTEntry.EXACT, bestMove);
             IDMove = bestMove;
@@ -167,7 +147,7 @@ public class Search {
                 value = -pVSearch(board, depth - 1, ply + 1, -beta, -alpha, true, false);
                 pVS = false;
             }
-            else {
+            else{
                 int reducedDepth = depth;
                 if (canApplyLMR(board, depth, move, moveIndex, inCheck))
                     reducedDepth = LMRReducedDepth(depth, pV);
