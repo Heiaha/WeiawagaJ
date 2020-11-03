@@ -77,7 +77,7 @@ public class Bitboard {
     }
 
     public final static long[][] BB_LINES = new long[64][64];
-    static{
+    static {
         for (int sq1 = Square.A1; sq1 <= Square.H8; sq1++){
             for (int sq2 = Square.A1; sq2 <= Square.H8; sq2++){
                 if (Square.getFile(sq1) == Square.getFile(sq2) || Square.getRank(sq1) == Square.getRank(sq2))

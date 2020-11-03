@@ -2,13 +2,15 @@ package mind;
 
 import movegen.*;
 import java.util.Comparator;
+import java.util.HashMap;
 
 
 public class MoveOrder {
 
-    private static final int[][][] killerMoves = new int[2][1000][3];
+    private static final int[][][] killerMoves = new int[2][1000][1];
     private static final int[][][] historyMoves = new int[2][64][64];
     private static final int[][] MvvLvaScores = new int[6][6];
+    private final static HashMap<Integer, Integer> seeValues = new HashMap<>();
 
     static {
         final int[] VictimScore = {100, 200, 300, 400, 500, 600};
@@ -17,6 +19,31 @@ public class MoveOrder {
                 MvvLvaScores[victim][attacker] = VictimScore[victim] + 6 - (VictimScore[attacker] / 100);
             }
         }
+    }
+
+    public static int seeCapture(Board board, Move move){
+        Integer value = seeValues.get(move.toFrom());
+        if (value != null)
+            return value;
+
+        int capturedPieceType = board.pieceTypeAt(move.to());
+        board.push(move);
+        value = Evaluation.PIECE_TYPE_VALUES[capturedPieceType].eval(board.phase()) - see(board, move.to());
+        board.pop();
+        seeValues.put(move.toFrom(), value);
+        return value;
+    }
+
+    public static int see(Board board, int toSq){
+        int value = 0;
+        int fromSq = board.smallestAttacker(toSq, board.getSideToPlay());
+        if (fromSq != Square.NO_SQUARE){
+            int capturedPieceValue = Evaluation.PIECE_TYPE_VALUES[board.pieceTypeAt(toSq)].eval(board.phase());
+            board.push(new Move(fromSq, toSq, Move.CAPTURE));
+            value = Math.max(0, capturedPieceValue - see(board, toSq));
+            board.pop();
+        }
+        return value;
     }
 
     public static void addKiller(Board board, Move move, int ply){
@@ -97,14 +124,59 @@ public class MoveOrder {
             }
         }
 
+//        MoveList winningCaptures = new MoveList();
+//        MoveList losingCaptures = new MoveList();
+//        for (Move move : captures){
+//            if (seeCapture(board, move) > 0)
+//                winningCaptures.add(move);
+//            else
+//                losingCaptures.add(move);
+//
+//        }
+
         Comparator<Move> compareByMvvLva = (Move move1, Move move2) -> Integer.compare(getMvvLvaScore(board, move2), getMvvLvaScore(board, move1));
         Comparator<Move> compareByHistory = (Move move1, Move move2) -> Integer.compare(getHistoryValue(board, move2), getHistoryValue(board, move1));
         captures.sort(compareByMvvLva);
         quiet.sort(compareByHistory);
+
+        sortedMoves.addAll(promotions);
         sortedMoves.addAll(captures);
         sortedMoves.addAll(killers);
-        sortedMoves.addAll(promotions);
         sortedMoves.addAll(quiet);
+
+        seeValues.clear();
+        return sortedMoves;
+    }
+
+    public static MoveList moveOrderingQ(final Board board, final MoveList moves){
+        MoveList sortedMoves = new MoveList();
+        MoveList promotions = new MoveList();
+        MoveList captures = new MoveList();
+
+        Move pvMove = Move.nullMove();
+        TTEntry ttEntry = TranspTable.get(board.hash());
+        if (ttEntry != null) {
+            pvMove = ttEntry.move();
+        }
+
+        for (Move move : moves){
+            if (move.equals(pvMove)) {
+                sortedMoves.add(move);
+            }
+            else {
+                switch (move.flags()) {
+                    case Move.PC_BISHOP, Move.PC_KNIGHT, Move.PC_ROOK, Move.PC_QUEEN, Move.PR_BISHOP, Move.PR_KNIGHT, Move.PR_ROOK, Move.PR_QUEEN -> promotions.add(move);
+                    case Move.CAPTURE -> captures.add(move);
+                }
+            }
+        }
+
+//        Comparator<Move> compareBySEE = (Move move1, Move move2) -> Integer.compare(seeCapture(board, move2), seeCapture(board, move1));
+        Comparator<Move> compareByMvvLva = (Move move1, Move move2) -> Integer.compare(getMvvLvaScore(board, move2), getMvvLvaScore(board, move1));
+        captures.sort(compareByMvvLva);
+
+        sortedMoves.addAll(captures);
+        sortedMoves.addAll(promotions);
         return sortedMoves;
     }
 }

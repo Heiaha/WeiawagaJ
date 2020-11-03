@@ -14,7 +14,7 @@ public class Search {
 
     private static boolean stop;
     private static Move IDMove = null;
-    private static int IDScore = -INF;
+    private static int IDScore = 0;
 
     public Search(){}
 
@@ -22,7 +22,7 @@ public class Search {
         Limits.calcTime(board.getSideToPlay(), board.gamePly());
         Limits.startTime = System.currentTimeMillis();
         IDMove = null;
-        IDScore = -INF;
+        IDScore = 0;
         stop = false;
         for (int depth = 1; depth <= maxSearchDepth || waitForStop; depth++) {
             negaMaxRoot(board, depth);
@@ -32,6 +32,7 @@ public class Search {
             System.out.print(" depth " + depth);
             System.out.print(" score cp " + IDScore);
             System.out.println(" nodes " + Statistics.totalNodes());
+
             Statistics.reset();
 
             if (stop || elapsed >= Limits.timeAllocated/2 || isScoreCheckmate(IDScore))
@@ -45,6 +46,7 @@ public class Search {
         MoveList moves = board.generateLegalMoves();
         if (moves.size() == 1) {
             IDMove = moves.get(0);
+            IDScore = 0;
             return;
         }
 
@@ -53,7 +55,7 @@ public class Search {
         Move bestMove = null;
         for (Move move : moves){
             board.push(move);
-            value = -pVSearch(board, depth - 1, 1, -beta, -alpha, true, true);
+            value = -negaMax(board, depth - 1, 1, -beta, -alpha, true);
             board.pop();
             if (stop || Limits.checkLimits()) {
                 stop = true;
@@ -74,7 +76,7 @@ public class Search {
         }
     }
 
-    public static int pVSearch(Board board, int depth, int ply, int alpha, int beta, boolean pV, boolean canApplyNull){
+    public static int negaMax(Board board, int depth, int ply, int alpha, int beta, boolean canApplyNull){
 
         if (stop || Limits.checkLimits()) {
             stop = true;
@@ -125,10 +127,10 @@ public class Search {
         }
 
         // Do a null move check if allowed
-        if (canApplyNullWindow(board, depth, pV, canApplyNull)){
+        if (canApplyNullWindow(board, depth, canApplyNull)) {
             int r = depth > 6 ? 3 : 2;
             board.pushNull();
-            int value = -pVSearch(board, depth - r - 1, ply + 1, -beta, -beta + 1, false, false);
+            int value = -negaMax(board, depth - r - 1, ply + 1, -beta, -beta + 1, false);
             board.popNull();
             if (value >= beta){
                 Statistics.betaCutoffs++;
@@ -140,23 +142,13 @@ public class Search {
         int moveIndex = 0;
         Move bestMove = null;
         moves = MoveOrder.moveOrdering(board, moves, ply);
-        boolean pVS = true;
         for (Move move : moves){
+            int reducedDepth = depth;
+            if (canApplyLMR(board, depth, move, moveIndex, inCheck))
+                reducedDepth = depth - 1;
             board.push(move);
-            if (pVS) {
-                value = -pVSearch(board, depth - 1, ply + 1, -beta, -alpha, true, false);
-                pVS = false;
-            }
-            else{
-                int reducedDepth = depth;
-                if (canApplyLMR(board, depth, move, moveIndex, inCheck))
-                    reducedDepth = LMRReducedDepth(depth, pV);
-                value = -pVSearch(board, reducedDepth - 1, ply + 1, -alpha - 1, -alpha, false, true);
-                if (value > alpha)
-                    value = -pVSearch(board, depth - 1, ply  + 1,  -beta, -alpha, false, true);
-            }
+            value = -negaMax(board, reducedDepth - 1, ply + 1, -beta, -alpha, true);
             board.pop();
-
             if (value >= beta){
                 TranspTable.set(board.hash(), value, depth, TTEntry.LOWER_BOUND, move);
                 if (move.flags() == Move.QUIET) {
@@ -201,11 +193,12 @@ public class Search {
             Statistics.qleafs++;
             return beta;
         }
+
         if (alpha < standPat)
             alpha = standPat;
 
         MoveList moves = board.generateLegalQMoves();
-        moves = MoveOrder.moveOrdering(board, moves, ply);
+        moves = MoveOrder.moveOrderingQ(board, moves);
         int value;
         for (Move move : moves){
             board.push(move);
@@ -225,8 +218,8 @@ public class Search {
         return Math.abs(score) >= INF/2;
     }
 
-    public static boolean canApplyNullWindow(Board board, int depth, boolean pV, boolean canApplyNull){
-        return canApplyNull && !pV && depth >= NullMinDepth && board.phase() >= 12 && !board.kingAttacked();
+    public static boolean canApplyNullWindow(Board board, int depth, boolean canApplyNull){
+        return canApplyNull && depth >= NullMinDepth && board.phase() >= 12 && !board.kingAttacked();
     }
 
     public static boolean canApplyLMR(Board board, int depth, Move move, int moveIndex, boolean fromCheck){
@@ -235,9 +228,11 @@ public class Search {
     }
 
     public static int LMRReducedDepth(int depth, boolean pV){
-        return pV ?
-            depth - LMRPVReduction :
-            depth / LMRNonPVDiv;
+//        return pV ?
+//            depth - LMRPVReduction :
+//            depth / LMRNonPVDiv;
+        return depth - LMRPVReduction;
+
     }
 
     public static Move getMove(){

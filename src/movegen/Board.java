@@ -176,7 +176,6 @@ public class Board {
         return materialHash;
     }
 
-
     public long bitboardOf(int piece){
         return piece_bb[piece];
     }
@@ -269,7 +268,7 @@ public class Board {
                     movePieceQuiet(Square.E1, Square.G1);
                     movePieceQuiet(Square.H1, Square.F1);
                 }
-                else{
+                else {
                     movePieceQuiet(Square.E8, Square.G8);
                     movePieceQuiet(Square.H8, Square.F8);
                 }
@@ -279,7 +278,7 @@ public class Board {
                     movePieceQuiet(Square.E1, Square.C1);
                     movePieceQuiet(Square.A1, Square.D1);
                 }
-                else{
+                else {
                     movePieceQuiet(Square.E8, Square.C8);
                     movePieceQuiet(Square.A8, Square.D8);
                 }
@@ -432,7 +431,7 @@ public class Board {
         return false;
     }
 
-    public boolean kingAttacked(int side){
+    public boolean kingAttacked(int side) {
         final int us = side;
         final int them = Side.flip(side);
         final int ourKing = Bitboard.lsb(bitboardOf(us, PieceType.KING));
@@ -457,6 +456,40 @@ public class Board {
             return true;
 
         return false;
+    }
+
+    public int smallestAttacker(int square, int side){
+        final int us = Side.flip(side);
+        final int them = side;
+
+        long pawns = Attacks.pawnAttacks(square, us) & bitboardOf(them, PieceType.PAWN);
+        if (pawns != 0)
+            return Bitboard.lsb(pawns);
+
+        long knights = Attacks.getKnightAttacks(square) & bitboardOf(them, PieceType.KNIGHT);
+        if (knights != 0)
+            return Bitboard.lsb(knights);
+
+        final long usBb = allPieces(us);
+        final long themBb = allPieces(them);
+        final long all = usBb | themBb;
+
+        final long bishopAttacks = Attacks.getBishopAttacks(square, all);
+        long bishops = bishopAttacks & bitboardOf(them, PieceType.BISHOP);
+
+        if (bishops != 0)
+            return Bitboard.lsb(bishops);
+
+        final long rookAttacks = Attacks.getRookAttacks(square, all);
+        long rooks = rookAttacks & bitboardOf(them, PieceType.ROOK);
+        if (rooks != 0)
+            return Bitboard.lsb(rooks);
+
+        long queens = (bishopAttacks | rookAttacks) & bitboardOf(them, PieceType.QUEEN);
+        if (queens != 0)
+            return Bitboard.lsb(queens);
+
+        return Square.NO_SQUARE;
     }
 
     public boolean isDraw(MoveList moves){
@@ -516,7 +549,6 @@ public class Board {
             b1 = Bitboard.extractLsb(b1);
         }
 
-
         b1 = Attacks.getKingAttacks(ourKing) & ~(usBb | danger);
 
         moves.makeQ(ourKing, b1 & ~themBb);
@@ -552,9 +584,8 @@ public class Board {
                 return moves;
             case 1:{
                 int checkerSquare = Bitboard.lsb(checkers);
-                switch (board[checkerSquare]){
-                    case Piece.WHITE_PAWN:
-                    case Piece.BLACK_PAWN:
+                switch (Piece.typeOf(board[checkerSquare])){
+                    case PieceType.PAWN:
                         // check to see if the checker is a pawn that can be captured ep
                         if (checkers == Bitboard.shift(Square.getBb(history[gamePly].epsq), Square.relative_dir(Square.SOUTH, us))){
                             b1 = Attacks.pawnAttacks(history[gamePly].epsq, them) & bitboardOf(us, PieceType.PAWN) & notPinned;
@@ -564,8 +595,7 @@ public class Board {
                             }
                         }
                         // FALL THROUGH INTENTIONAL
-                    case Piece.WHITE_KNIGHT:
-                    case Piece.BLACK_KNIGHT:
+                    case PieceType.KNIGHT:
                         b1 = attackersFrom(checkerSquare, all, us) & notPinned;
                         while (b1 != 0){
                             moves.add(new Move(Bitboard.lsb(b1), checkerSquare, Move.CAPTURE));
@@ -591,7 +621,7 @@ public class Board {
                 if (history[gamePly].epsq != Square.NO_SQUARE){
                     //b1 contains pawns that can do an ep capture
                     b1 = Attacks.pawnAttacks(history[gamePly].epsq, them) & bitboardOf(us, PieceType.PAWN) & notPinned;
-                    while (b1 != 0){
+                    while (b1 != 0) {
                         s = Bitboard.lsb(b1);
                         b1 = Bitboard.extractLsb(b1);
 
@@ -824,22 +854,20 @@ public class Board {
                 return moves;
             case 1:{
                 int checkerSquare = Bitboard.lsb(checkers);
-                switch (board[checkerSquare]){
-                    case Piece.WHITE_PAWN:
-                    case Piece.BLACK_PAWN:
+                switch (Piece.typeOf(board[checkerSquare])){
+                    case PieceType.PAWN:
                         // check to see if the checker is a pawn that can be captured ep
                         if (checkers == Bitboard.shift(Square.getBb(history[gamePly].epsq), Square.relative_dir(Square.SOUTH, us))){
                             b1 = Attacks.pawnAttacks(history[gamePly].epsq, them) & bitboardOf(us, PieceType.PAWN) & notPinned;
-                            while (b1 != 0){
+                            while (b1 != 0) {
                                 moves.add(new Move(Bitboard.lsb(b1), history[gamePly].epsq, Move.EN_PASSANT));
                                 b1 = Bitboard.extractLsb(b1);
                             }
                         }
                         // FALL THROUGH INTENTIONAL
-                    case Piece.WHITE_KNIGHT:
-                    case Piece.BLACK_KNIGHT:
+                    case PieceType.KNIGHT:
                         b1 = attackersFrom(checkerSquare, all, us) & notPinned;
-                        while (b1 != 0){
+                        while (b1 != 0) {
                             moves.add(new Move(Bitboard.lsb(b1), checkerSquare, Move.CAPTURE));
                             b1 = Bitboard.extractLsb(b1);
                         }

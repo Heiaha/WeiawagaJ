@@ -36,7 +36,7 @@ public class Move {
         return move & 0xffff;
     }
 
-    public int flags(){
+    public int flags() {
         return (move >>> 12) & 0xf;
     }
 
@@ -49,7 +49,7 @@ public class Move {
     }
 
     @Override
-    public boolean equals(Object other){
+    public boolean equals(Object other) {
         if (other != null && getClass() == other.getClass())
             return this.move == ((Move)other).move();
         return false;

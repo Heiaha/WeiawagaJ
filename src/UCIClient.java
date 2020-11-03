@@ -13,7 +13,7 @@ public class UCIClient {
     private final static String QUIT = "quit";
     private final static String UCINEWGAME = "ucinewgame";
     private final static String POSITIONFEN = "position fen";
-    private final static int DEFAULT_MAX_SEARCH_DEPTH = 25;
+    private final static int DEFAULT_MAX_SEARCH_DEPTH = 99;
 
     private final static SearchThread thread = new SearchThread();
     private static Board board = new Board();
@@ -31,13 +31,13 @@ public class UCIClient {
                 System.exit(0);
             } else if (input.equals(UCINEWGAME)) {
                 board = new Board();
+                TranspTable.reset();
             } else if (input.equals(UCI)) {
                 board = new Board();
                 System.out.println("id name " + ENGINENAME);
                 System.out.println("id author " + AUTHOR);
                 System.out.println("uciok");
             } else if (input.equals(ISREADY)) {
-                board = new Board();
                 System.out.println("readyok");
             } else if (input.startsWith(MOVEFROMSTART) || input.startsWith(POSITIONFEN)) {
                 parse(input);
@@ -45,6 +45,7 @@ public class UCIClient {
                 go(input.split(" "));
             } else if (input.equals(STOP)) {
                 thread.stop();
+                TranspTable.reset();
             }
             else if (input.equals("evaluate"))
                 System.out.println(Evaluation.evaluateState(board));

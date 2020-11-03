@@ -13,6 +13,7 @@ public class SearchThread implements Runnable {
     }
 
     public void run(){
+        long startTime = System.currentTimeMillis();
         running.set(true);
         Search.itDeep(board);
         System.out.println("info score cp " + Search.getScore());
@@ -22,6 +23,7 @@ public class SearchThread implements Runnable {
         MoveOrder.clearHistory();
         System.gc();
         Limits.resetTime();
+        long endTime = System.currentTimeMillis();
         running.set(false);
     }
 
