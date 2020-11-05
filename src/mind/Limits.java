@@ -8,7 +8,7 @@ public class Limits {
     public static long startTime;
     public static int limitCheckCount = 4096;
 
-    public final static int overhead = 100;
+    public final static int overhead = 0;
 
     public static boolean checkLimits(){
         if (--limitCheckCount > 0)
@@ -48,6 +48,10 @@ public class Limits {
         increment[Side.WHITE] = 0;
         increment[Side.BLACK] = 0;
         timeAllocated = Long.MAX_VALUE;
+    }
+
+    public static long timeElapsed(){
+        return System.currentTimeMillis() - startTime;
     }
 
     public static float phaseFactor(int ply){

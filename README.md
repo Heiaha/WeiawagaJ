@@ -14,6 +14,7 @@ https://lichess.org/@/Weiawaga
     - [Negamax with alpha beta pruning](https://en.wikipedia.org/wiki/Negamax#Negamax_with_alpha_beta_pruning)
     - [Iterative deepening](https://en.wikipedia.org/wiki/Iterative_deepening_depth-first_search)
     - [Quiescence search](https://en.wikipedia.org/wiki/Quiescence_search)
+    - [Aspiration windows](https://www.chessprogramming.org/Aspiration_Windows)
     - [Null move pruning](https://www.chessprogramming.org/Null_Move_Pruning)
     - [Check extensions](https://www.chessprogramming.org/Check_Extensions)
   - Evaluation

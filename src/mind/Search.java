@@ -10,11 +10,13 @@ public class Search {
     private final static int LMRMoveWOReduction = 3;
     private final static int LMRPVReduction = 1;
     private final static int LMRNonPVDiv = 3;
+    private final static int AspirationWindow = 25;
     private final static int INF = 999999;
 
     private static boolean stop;
     private static Move IDMove = null;
     private static int IDScore = 0;
+    private static int selDepth;
 
     public Search(){}
 
@@ -23,16 +25,23 @@ public class Search {
         Limits.startTime = System.currentTimeMillis();
         IDMove = null;
         IDScore = 0;
+        selDepth = 0;
+        int alpha = -INF;
+        int beta = INF;
         stop = false;
-        for (int depth = 1; depth <= maxSearchDepth || waitForStop; depth++) {
-            negaMaxRoot(board, depth);
+        int depth = 1;
+        while (depth <= maxSearchDepth || waitForStop) {
+            negaMaxRoot(board, depth, alpha, beta);
+            if (IDScore <= alpha || IDScore >= beta){
+                alpha = -INF;
+                beta = INF;
+                continue;
+            }
+            printInfo(board, depth);
+            alpha = IDScore - AspirationWindow;
+            beta = IDScore + AspirationWindow;
+            depth++;
             long elapsed = System.currentTimeMillis() - Limits.startTime;
-            System.out.print("info");
-            System.out.print(" currmove " + IDMove.uci());
-            System.out.print(" depth " + depth);
-            System.out.print(" score cp " + IDScore);
-            System.out.println(" nodes " + Statistics.totalNodes());
-
             Statistics.reset();
 
             if (stop || elapsed >= Limits.timeAllocated/2 || isScoreCheckmate(IDScore))
@@ -40,9 +49,7 @@ public class Search {
         }
     }
 
-    public static void negaMaxRoot(Board board, int depth){
-        int alpha = -INF;
-        int beta = INF;
+    public static void negaMaxRoot(Board board, int depth, int alpha, int beta){
         MoveList moves = board.generateLegalMoves();
         if (moves.size() == 1) {
             IDMove = moves.get(0);
@@ -177,6 +184,7 @@ public class Search {
     }
 
     public static int qSearch(Board board, int depth, int ply, int alpha, int beta){
+        selDepth = Math.max(ply, selDepth);
         Statistics.qnodes++;
         if (stop || Limits.checkLimits()){
             stop = true;
@@ -235,6 +243,18 @@ public class Search {
 
     }
 
+    public static String getPv(Board board, int depth){
+        Move bestMove;
+        if (TranspTable.get(board.hash()) == null || depth == 0)
+            return "";
+        else
+            bestMove = TranspTable.get(board.hash()).move();
+        board.push(bestMove);
+        String pV = bestMove.uci() + " " + getPv(board, depth - 1);
+        board.pop();
+        return pV;
+    }
+
     public static Move getMove(){
         return IDMove;
     }
@@ -245,5 +265,16 @@ public class Search {
 
     public static void stop(){
         stop = true;
+    }
+
+    public static void printInfo(Board board, int depth){
+        System.out.print("info");
+        System.out.print(" currmove " + IDMove.uci());
+        System.out.print(" depth " + depth);
+        System.out.print(" seldepth " + selDepth);
+        System.out.print(" time " + Limits.timeElapsed());
+        System.out.print(" score cp " + IDScore);
+        System.out.print(" nodes " + Statistics.totalNodes());
+        System.out.println(" pv " + getPv(board, depth));
     }
 }
