@@ -8,7 +8,7 @@ public class Limits {
     public static long startTime;
     public static int limitCheckCount = 4096;
 
-    public final static int overhead = 0;
+    public final static int overhead = 100;
 
     public static boolean checkLimits(){
         if (--limitCheckCount > 0)

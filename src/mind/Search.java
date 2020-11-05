@@ -26,26 +26,29 @@ public class Search {
         IDMove = null;
         IDScore = 0;
         selDepth = 0;
+        stop = false;
         int alpha = -INF;
         int beta = INF;
-        stop = false;
         int depth = 1;
         while (depth <= maxSearchDepth || waitForStop) {
-            negaMaxRoot(board, depth, alpha, beta);
-            if (IDScore <= alpha || IDScore >= beta){
-                alpha = -INF;
-                beta = INF;
-                continue;
-            }
-            printInfo(board, depth);
-            alpha = IDScore - AspirationWindow;
-            beta = IDScore + AspirationWindow;
-            depth++;
             long elapsed = System.currentTimeMillis() - Limits.startTime;
-            Statistics.reset();
-
             if (stop || elapsed >= Limits.timeAllocated/2 || isScoreCheckmate(IDScore))
                 break;
+
+            negaMaxRoot(board, depth, -beta, -alpha);
+            if (IDScore <= alpha){
+                alpha = -INF;
+            }
+            else if (IDScore >= beta){
+                beta = INF;
+            }
+            else {
+                printInfo(board, depth);
+                alpha = IDScore + AspirationWindow;
+                beta = IDScore - AspirationWindow;
+                depth++;
+                Statistics.reset();
+            }
         }
     }
 
