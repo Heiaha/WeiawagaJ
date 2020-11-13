@@ -32,11 +32,10 @@ public class Search {
         int depth = 1;
         while (depth <= maxSearchDepth || waitForStop) {
             long elapsed = System.currentTimeMillis() - Limits.startTime;
-            if (stop || elapsed >= Limits.timeAllocated/2 || isScoreCheckmate(IDScore))
+            if (stop || elapsed >= Limits.timeAllocated / 2 || isScoreCheckmate(IDScore))
                 break;
-
-            negaMaxRoot(board, depth, -beta, -alpha);
-            if (IDScore <= alpha){
+            negaMaxRoot(board, depth, alpha, beta);
+            if (IDScore <= alpha) {
                 alpha = -INF;
             }
             else if (IDScore >= beta){
@@ -44,8 +43,8 @@ public class Search {
             }
             else {
                 printInfo(board, depth);
-                alpha = IDScore + AspirationWindow;
-                beta = IDScore - AspirationWindow;
+                alpha = IDScore - AspirationWindow;
+                beta = IDScore + AspirationWindow;
                 depth++;
                 Statistics.reset();
             }
@@ -238,14 +237,6 @@ public class Search {
                 && !fromCheck && !board.kingAttacked();
     }
 
-    public static int LMRReducedDepth(int depth, boolean pV){
-//        return pV ?
-//            depth - LMRPVReduction :
-//            depth / LMRNonPVDiv;
-        return depth - LMRPVReduction;
-
-    }
-
     public static String getPv(Board board, int depth){
         Move bestMove;
         if (TranspTable.get(board.hash()) == null || depth == 0)
@@ -259,7 +250,10 @@ public class Search {
     }
 
     public static Move getMove(){
-        return IDMove;
+        if (IDMove != null)
+            return IDMove;
+        else
+            return Move.nullMove();
     }
 
     public static int getScore(){

@@ -36,6 +36,11 @@ public class SearchThread implements Runnable {
     public void stop(){
         Search.stop();
         Search.waitForStop = false;
+        TranspTable.reset();
+        MoveOrder.clearKillers();
+        MoveOrder.clearHistory();
+        System.gc();
+        Limits.resetTime();
         running.set(false);
     }
 }

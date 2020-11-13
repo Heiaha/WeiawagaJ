@@ -45,7 +45,6 @@ public class UCIClient {
                 go(input.split(" "));
             } else if (input.equals(STOP)) {
                 thread.stop();
-                TranspTable.reset();
             }
             else if (input.equals("evaluate"))
                 System.out.println(Evaluation.evaluateState(board));

@@ -35,7 +35,9 @@ public class Limits {
 
         float phaseFactor = phaseFactor(game_ply);
 
-        timeAllocated = (long)(ourTime*timeRatio*phaseFactor/30.0 + increment[activeSide] - overhead);
+        timeAllocated = (long)(ourTime*timeRatio*phaseFactor/30.0 + 0.8*increment[activeSide] - overhead);
+        if (timeAllocated <= 0)
+            timeAllocated = (long)(ourTime*timeRatio*phaseFactor/30.0 + 0.8*increment[activeSide]);
     }
 
     public static void setTime(long time){

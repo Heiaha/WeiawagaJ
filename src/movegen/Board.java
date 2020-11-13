@@ -492,6 +492,24 @@ public class Board {
         return Square.NO_SQUARE;
     }
 
+    public boolean isInsufficientMaterial(int color){
+        if ((bitboardOf(color, PieceType.PAWN) | bitboardOf(color, PieceType.ROOK) | bitboardOf(color, PieceType.QUEEN)) != 0)
+            return false;
+
+        long ourPieces = allPieces(color);
+        long theirPieces = allPieces(Side.flip(color));
+        if (bitboardOf(color, PieceType.KNIGHT) != 0)
+            return Bitboard.popcount(ourPieces) <= 2 && (theirPieces & ~bitboardOf(Side.flip(color), PieceType.KING) & ~bitboardOf(Side.flip(color), PieceType.QUEEN)) == 0;
+
+        long ourBishops = bitboardOf(color, PieceType.BISHOP);
+        if (ourBishops != 0){
+            boolean sameColor = (ourBishops & Bitboard.DARK_SQUARES) == 0 || (ourBishops & Bitboard.LIGHT_SQUARES) == 0;
+            return sameColor && (bitboardOf(color, PieceType.PAWN) | bitboardOf(Side.flip(color), PieceType.PAWN)) == 0
+                    || (bitboardOf(color, PieceType.KNIGHT) | bitboardOf(Side.flip(color), PieceType.KNIGHT)) == 0;
+        }
+        return true;
+    }
+
     public boolean isDraw(MoveList moves){
         if (history[gamePly].halfmoveCounter >= 100 || (checkers == 0 && moves.size() == 0))
             return true;
