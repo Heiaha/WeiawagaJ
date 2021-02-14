@@ -59,10 +59,12 @@ public class Search {
             return;
         }
 
-        moves = MoveOrder.moveOrdering(board, moves, 0);
+        MoveOrder.scoreMoves(board, moves, 0);
         int value;
         Move bestMove = null;
-        for (Move move : moves){
+        for (int i = 0; i < moves.size(); i++){
+            MoveOrder.SortNextBestMove(moves, i);
+            Move move = moves.get(i);
             board.push(move);
             value = -negaMax(board, depth - 1, 1, -beta, -alpha, true);
             board.pop();
