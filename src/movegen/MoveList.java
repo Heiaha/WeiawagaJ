@@ -1,8 +1,8 @@
 package movegen;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 
-public class MoveList extends LinkedList<Move> {
+public class MoveList extends ArrayList<Move> {
 
     public MoveList(){}
 
