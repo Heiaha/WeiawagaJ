@@ -3,10 +3,7 @@ package mind;
 import movegen.*;
 
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-
-import static java.lang.Integer.max;
+import static java.lang.Integer.min;
 
 
 public class MoveOrder {
@@ -14,7 +11,6 @@ public class MoveOrder {
     private static final int[][][] killerMoves = new int[2][1000][1];
     private static final int[][][] historyMoves = new int[2][64][64];
     private static final int[][] MvvLvaScores = new int[6][6];
-    private final static HashMap<Integer, Integer> seeValues = new HashMap<>();
 
     private static final int HashMoveScore = 10000;
     private static final int PromotionScore = 5000;
@@ -31,15 +27,11 @@ public class MoveOrder {
     }
 
     public static int seeCapture(Board board, Move move){
-        Integer value = seeValues.get(move.toFrom());
-        if (value != null)
-            return value;
-
         int capturedPieceType = board.pieceTypeAt(move.to());
         board.push(move);
-        value = Evaluation.PIECE_TYPE_VALUES[capturedPieceType].eval(board.phase()) - see(board, move.to());
+        int value = Evaluation.PIECE_TYPE_VALUES[capturedPieceType].eval(board.phase()) - see(board, move.to());
         board.pop();
-        seeValues.put(move.toFrom(), value);
+
         return value;
     }
 
@@ -144,7 +136,7 @@ public class MoveOrder {
                 case Move.DOUBLE_PUSH:
                 case Move.OO:
                 case Move.OOO:
-                    move.addToScore(max(getHistoryValue(board, move), KillerMoveScore));
+                    move.addToScore(min(getHistoryValue(board, move), KillerMoveScore));
                     break;
             }
         }
@@ -153,14 +145,12 @@ public class MoveOrder {
     public static void SortNextBestMove(MoveList moves, int curIndex){
         int max = Integer.MIN_VALUE;
         int maxIndex = -1;
-
         for (int i = curIndex; i < moves.size(); i++){
             if (moves.get(i).score() > max){
                 max = moves.get(i).score();
                 maxIndex = i;
             }
         }
-
         Collections.swap(moves, curIndex, maxIndex);
     }
 
