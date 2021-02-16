@@ -225,8 +225,6 @@ public class Search {
             }
             if (value > alpha)
                 alpha = value;
-
-
         }
         return alpha;
     }
