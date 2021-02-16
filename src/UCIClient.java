@@ -20,7 +20,7 @@ public class UCIClient {
 
 
     public static void run() {
-        System.out.println("Weiawaga v1.2, October 9, 2020");
+        System.out.println("Weiawaga v1.4, February 14, 2021");
         System.out.println("Homepage and source code: https://github.com/Heiaha/Weiawaga");
         Scanner inputStream = new Scanner(System.in);
         board = new Board();

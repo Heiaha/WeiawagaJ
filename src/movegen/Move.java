@@ -7,13 +7,16 @@ public class Move {
         PC_KNIGHT = 0b1100, PC_BISHOP = 0b1101, PC_ROOK = 0b1110, PC_QUEEN = 0b1111, NULL = 0b1001;
 
     private final int move;
+    private int sortScore;
 
     public Move(){
         move = 0;
+        sortScore = 0;
     }
 
     public Move(int m){
         move = m;
+        sortScore = 0;
     }
 
     public Move(int from, int to){
@@ -44,6 +47,10 @@ public class Move {
         return move;
     }
 
+    public int score(){
+        return sortScore;
+    }
+
     public static Move nullMove(){
         return new Move(Square.NO_SQUARE, Square.NO_SQUARE, Move.NULL);
     }
@@ -64,5 +71,9 @@ public class Move {
             default -> "";
         };
         return Square.getName(this.from()) + Square.getName(this.to()) + promo;
+    }
+
+    public void addToScore(int score){
+        sortScore += score;
     }
 }

@@ -59,10 +59,12 @@ public class Search {
             return;
         }
 
-        moves = MoveOrder.moveOrdering(board, moves, 0);
+        MoveOrder.scoreMoves(board, moves, 0);
         int value;
         Move bestMove = null;
-        for (Move move : moves){
+        for (int i = 0; i < moves.size(); i++){
+            MoveOrder.SortNextBestMove(moves, i);
+            Move move = moves.get(i);
             board.push(move);
             value = -negaMax(board, depth - 1, 1, -beta, -alpha, true);
             board.pop();
@@ -148,12 +150,13 @@ public class Search {
         }
 
         int value;
-        int moveIndex = 0;
         Move bestMove = null;
-        moves = MoveOrder.moveOrdering(board, moves, ply);
-        for (Move move : moves){
+        MoveOrder.scoreMoves(board, moves, ply);
+        for (int i = 0; i < moves.size(); i++){
+            MoveOrder.SortNextBestMove(moves, i);
+            Move move = moves.get(i);
             int reducedDepth = depth;
-            if (canApplyLMR(board, depth, move, moveIndex, inCheck))
+            if (canApplyLMR(board, depth, move, i, inCheck))
                 reducedDepth = depth - 1;
             board.push(move);
             value = -negaMax(board, reducedDepth - 1, ply + 1, -beta, -alpha, true);
@@ -171,7 +174,7 @@ public class Search {
                 bestMove = move;
                 alpha = value;
             }
-            moveIndex++;
+
         }
 
         if (bestMove != null){
@@ -208,9 +211,11 @@ public class Search {
             alpha = standPat;
 
         MoveList moves = board.generateLegalQMoves();
-        moves = MoveOrder.moveOrderingQ(board, moves);
+        MoveOrder.scoreMoves(board, moves, ply);
         int value;
-        for (Move move : moves){
+        for (int i = 0; i < moves.size(); i++){
+            MoveOrder.SortNextBestMove(moves, i);
+            Move move = moves.get(i);
             board.push(move);
             value = -qSearch(board, depth - 1, ply + 1, -beta, -alpha);
             board.pop();

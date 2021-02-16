@@ -1,8 +1,9 @@
 package mind;
 
 import movegen.*;
-import java.util.Comparator;
-import java.util.HashMap;
+
+import java.util.Collections;
+import static java.lang.Integer.min;
 
 
 public class MoveOrder {
@@ -10,7 +11,11 @@ public class MoveOrder {
     private static final int[][][] killerMoves = new int[2][1000][1];
     private static final int[][][] historyMoves = new int[2][64][64];
     private static final int[][] MvvLvaScores = new int[6][6];
-    private final static HashMap<Integer, Integer> seeValues = new HashMap<>();
+
+    private static final int HashMoveScore = 10000;
+    private static final int PromotionScore = 5000;
+    private static final int CaptureScore = 200;
+    private static final int KillerMoveScore = 90;
 
     static {
         final int[] VictimScore = {100, 200, 300, 400, 500, 600};
@@ -22,15 +27,11 @@ public class MoveOrder {
     }
 
     public static int seeCapture(Board board, Move move){
-        Integer value = seeValues.get(move.toFrom());
-        if (value != null)
-            return value;
-
         int capturedPieceType = board.pieceTypeAt(move.to());
         board.push(move);
-        value = Evaluation.PIECE_TYPE_VALUES[capturedPieceType].eval(board.phase()) - see(board, move.to());
+        int value = Evaluation.PIECE_TYPE_VALUES[capturedPieceType].eval(board.phase()) - see(board, move.to());
         board.pop();
-        seeValues.put(move.toFrom(), value);
+
         return value;
     }
 
@@ -94,13 +95,11 @@ public class MoveOrder {
     public static int getMvvLvaScore(Board board, Move move){
         return MvvLvaScores[board.pieceTypeAt(move.to())][board.pieceTypeAt(move.from())];
     }
-    
-    public static MoveList moveOrdering(final Board board, final MoveList moves, int ply){
-        MoveList sortedMoves = new MoveList();
-        MoveList killers = new MoveList();
-        MoveList promotions = new MoveList();
-        MoveList captures = new MoveList();
-        MoveList quiet = new MoveList();
+
+    public static void scoreMoves(final Board board, final MoveList moves, int ply) {
+
+        if (moves.size() == 0)
+            return;
 
         Move pvMove = Move.nullMove();
         TTEntry ttEntry = TranspTable.get(board.hash());
@@ -108,75 +107,51 @@ public class MoveOrder {
             pvMove = ttEntry.move();
         }
 
-        for (Move move : moves){
+        for (Move move : moves) {
             if (move.equals(pvMove)) {
-               sortedMoves.add(move);
+                move.addToScore(HashMoveScore);
             }
-            else if(isKiller(board, move, ply)){
-                killers.add(move);
+            if (isKiller(board, move, ply)) {
+                move.addToScore(KillerMoveScore);
             }
-            else {
-                switch (move.flags()) {
-                    case Move.PC_BISHOP, Move.PC_KNIGHT, Move.PC_ROOK, Move.PC_QUEEN, Move.PR_BISHOP, Move.PR_KNIGHT, Move.PR_ROOK, Move.PR_QUEEN -> promotions.add(move);
-                    case Move.CAPTURE -> captures.add(move);
-                    case Move.QUIET, Move.EN_PASSANT, Move.DOUBLE_PUSH, Move.OO, Move.OOO -> quiet.add(move);
-                }
+            switch (move.flags()) {
+                case Move.PC_BISHOP:
+                case Move.PC_KNIGHT:
+                case Move.PC_ROOK:
+                case Move.PC_QUEEN:
+                    move.addToScore(CaptureScore);
+                    move.addToScore(getMvvLvaScore(board, move));
+                case Move.PR_BISHOP:
+                case Move.PR_KNIGHT:
+                case Move.PR_ROOK:
+                case Move.PR_QUEEN:
+                    move.addToScore(PromotionScore);
+                    break;
+                case Move.CAPTURE:
+                    move.addToScore(CaptureScore);
+                    move.addToScore(getMvvLvaScore(board, move));
+                    break;
+                case Move.QUIET:
+                case Move.EN_PASSANT:
+                case Move.DOUBLE_PUSH:
+                case Move.OO:
+                case Move.OOO:
+                    move.addToScore(min(getHistoryValue(board, move), KillerMoveScore));
+                    break;
             }
         }
-
-//        MoveList winningCaptures = new MoveList();
-//        MoveList losingCaptures = new MoveList();
-//        for (Move move : captures){
-//            if (seeCapture(board, move) > 0)
-//                winningCaptures.add(move);
-//            else
-//                losingCaptures.add(move);
-//
-//        }
-
-        Comparator<Move> compareByMvvLva = (Move move1, Move move2) -> Integer.compare(getMvvLvaScore(board, move2), getMvvLvaScore(board, move1));
-        Comparator<Move> compareByHistory = (Move move1, Move move2) -> Integer.compare(getHistoryValue(board, move2), getHistoryValue(board, move1));
-        captures.sort(compareByMvvLva);
-        quiet.sort(compareByHistory);
-
-        sortedMoves.addAll(promotions);
-        sortedMoves.addAll(captures);
-        sortedMoves.addAll(killers);
-        sortedMoves.addAll(quiet);
-
-        seeValues.clear();
-        return sortedMoves;
     }
 
-    public static MoveList moveOrderingQ(final Board board, final MoveList moves){
-        MoveList sortedMoves = new MoveList();
-        MoveList promotions = new MoveList();
-        MoveList captures = new MoveList();
-
-        Move pvMove = Move.nullMove();
-        TTEntry ttEntry = TranspTable.get(board.hash());
-        if (ttEntry != null) {
-            pvMove = ttEntry.move();
-        }
-
-        for (Move move : moves){
-            if (move.equals(pvMove)) {
-                sortedMoves.add(move);
-            }
-            else {
-                switch (move.flags()) {
-                    case Move.PC_BISHOP, Move.PC_KNIGHT, Move.PC_ROOK, Move.PC_QUEEN, Move.PR_BISHOP, Move.PR_KNIGHT, Move.PR_ROOK, Move.PR_QUEEN -> promotions.add(move);
-                    case Move.CAPTURE -> captures.add(move);
-                }
+    public static void SortNextBestMove(MoveList moves, int curIndex){
+        int max = Integer.MIN_VALUE;
+        int maxIndex = -1;
+        for (int i = curIndex; i < moves.size(); i++){
+            if (moves.get(i).score() > max){
+                max = moves.get(i).score();
+                maxIndex = i;
             }
         }
-
-//        Comparator<Move> compareBySEE = (Move move1, Move move2) -> Integer.compare(seeCapture(board, move2), seeCapture(board, move1));
-        Comparator<Move> compareByMvvLva = (Move move1, Move move2) -> Integer.compare(getMvvLvaScore(board, move2), getMvvLvaScore(board, move1));
-        captures.sort(compareByMvvLva);
-
-        sortedMoves.addAll(captures);
-        sortedMoves.addAll(promotions);
-        return sortedMoves;
+        Collections.swap(moves, curIndex, maxIndex);
     }
+
 }
