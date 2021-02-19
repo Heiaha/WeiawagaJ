@@ -9,7 +9,7 @@ import static java.lang.Integer.min;
 public class MoveOrder {
 
     private static final int[][][] killerMoves = new int[2][1000][1];
-    private static final int[][][] historyMoves = new int[2][64][64];
+    private static final int[][] historyMoves = new int[64][64];
     private static final int[][] MvvLvaScores = new int[6][6];
 
     private static final int HashMoveScore = 10000;
@@ -74,20 +74,37 @@ public class MoveOrder {
         }
     }
 
-    public static void addHistory(Board board, Move move, int depth){
-        historyMoves[board.getSideToPlay()][move.from()][move.to()] += depth*depth;
+    public static void addHistory(Move move, int depth){
+        int from = move.from();
+        int to = move.to();
+        historyMoves[from][to] += depth*depth;
+
+        if (historyMoves[from][to] > Integer.MAX_VALUE / 2) {
+            for (int sq1 = Square.A1; sq1 <= Square.H8; sq1++){
+                for (int sq2 = Square.A1; sq2 <= Square.H8; sq2++){
+                    historyMoves[sq1][sq2] /= 2;
+                }
+            }
+        }
+
     }
 
-    public static int getHistoryValue(Board board, Move move){
-        return historyMoves[board.getSideToPlay()][move.from()][move.to()];
+    public static int getHistoryValue(Move move){
+        return historyMoves[move.from()][move.to()];
     }
 
     public static void clearHistory(){
-        for (int color = Side.WHITE; color <= Side.BLACK; color++){
-            for (int sq1 = Square.A1; sq1 <= Square.H8; sq1++){
-                for (int sq2 = Square.A1; sq2 <= Square.H8; sq2++){
-                    historyMoves[color][sq1][sq2] = 0;
-                }
+        for (int sq1 = Square.A1; sq1 <= Square.H8; sq1++){
+            for (int sq2 = Square.A1; sq2 <= Square.H8; sq2++){
+                historyMoves[sq1][sq2] = 0;
+            }
+        }
+    }
+
+    public static void ageHistory(){
+        for (int sq1 = Square.A1; sq1 <= Square.H8; sq1++){
+            for (int sq2 = Square.A1; sq2 <= Square.H8; sq2++){
+                historyMoves[sq1][sq2] /= 8;
             }
         }
     }
@@ -102,7 +119,7 @@ public class MoveOrder {
             return;
 
         Move pvMove = Move.nullMove();
-        TTEntry ttEntry = TranspTable.get(board.hash());
+        TTEntry ttEntry = TranspTable.probe(board.hash());
         if (ttEntry != null) {
             pvMove = ttEntry.move();
         }
@@ -136,7 +153,7 @@ public class MoveOrder {
                 case Move.DOUBLE_PUSH:
                 case Move.OO:
                 case Move.OOO:
-                    move.addToScore(min(getHistoryValue(board, move), KillerMoveScore));
+                    move.addToScore(min(getHistoryValue(move), KillerMoveScore));
                     break;
             }
         }

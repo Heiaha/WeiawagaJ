@@ -510,6 +510,18 @@ public class Board {
         return true;
     }
 
+    public boolean isRepetitionOrFifty(){
+        if (history[gamePly].halfmoveCounter >= 100)
+            return true;
+        final int lookBack = Math.min(history[gamePly].pliesFromNull, history[gamePly].halfmoveCounter);
+        for (int i = 2; i <= lookBack; i += 2){
+            if (materialHash == history[gamePly - i].materialHash) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public boolean isDraw(MoveList moves){
         if (history[gamePly].halfmoveCounter >= 100 || (checkers == 0 && moves.size() == 0))
             return true;
@@ -997,18 +1009,6 @@ public class Board {
 
         b1 = bitboardOf(us, PieceType.PAWN) & notPinned & Rank.getBb(Rank.relativeRank(Rank.RANK_7, us));
         if (b1 != 0){
-            b2 = Bitboard.shift(b1, Square.relative_dir(Square.NORTH, us)) & quietMask;
-            while (b2 != 0){
-                s = Bitboard.lsb(b2);
-                b2 = Bitboard.extractLsb(b2);
-
-                moves.add(new Move(s - Square.relative_dir(Square.NORTH, us), s, Move.PR_QUEEN));
-                moves.add(new Move(s - Square.relative_dir(Square.NORTH, us), s, Move.PR_ROOK));
-                moves.add(new Move(s - Square.relative_dir(Square.NORTH, us), s, Move.PR_KNIGHT));
-                moves.add(new Move(s - Square.relative_dir(Square.NORTH, us), s, Move.PR_BISHOP));
-
-            }
-
             b2 = Bitboard.shift(b1, Square.relative_dir(Square.NORTH_WEST, us)) & captureMask;
             b3 = Bitboard.shift(b1, Square.relative_dir(Square.NORTH_EAST, us)) & captureMask;
 

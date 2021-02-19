@@ -10,7 +10,7 @@ public class TranspTable {
         table.put(key_, new TTEntry(key_, score_, depth_, flag_, bestMove_));
     }
 
-    public static TTEntry get(long key_){
+    public static TTEntry probe(long key_){
         return table.get(key_);
     }
 

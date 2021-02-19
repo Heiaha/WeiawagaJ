@@ -18,8 +18,6 @@ public class SearchThread implements Runnable {
         System.out.println("info score cp " + Search.getScore());
         System.out.println("bestmove " + Search.getMove().uci());
         TranspTable.reset();
-        MoveOrder.clearKillers();
-        MoveOrder.clearHistory();
         System.gc();
         Limits.resetTime();
         running.set(false);
