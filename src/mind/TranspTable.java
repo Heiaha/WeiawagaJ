@@ -6,16 +6,15 @@ import java.util.HashMap;
 public class TranspTable {
     private final static HashMap<Long, TTEntry> table = new HashMap<>();
 
-    public static void set(long key_, int score_, int depth_, int flag_, Move bestMove_){
-        table.put(key_, new TTEntry(key_, score_, depth_, flag_, bestMove_));
+    public static void set(long key, int score, int depth, int flag, Move bestMove){
+        table.put(key, new TTEntry(key, score, depth, flag, bestMove));
     }
 
-    public static TTEntry probe(long key_){
-        return table.get(key_);
+    public static TTEntry probe(long key){
+        return table.get(key);
     }
 
     public static void reset(){
         table.clear();
     }
-
 }
