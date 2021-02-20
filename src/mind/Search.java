@@ -261,7 +261,7 @@ public class Search {
         return canApplyNull &&
                 !inCheck &&
                 depth >= NullMinDepth &&
-                board.phase() > 10 &&
+                (board.phase() < Evaluation.PIECE_PHASES[PieceType.QUEEN] + Evaluation.PIECE_PHASES[PieceType.BISHOP]) && // One queen + minor piece
                 Evaluation.evaluateState(board) >= beta;
     }
 
