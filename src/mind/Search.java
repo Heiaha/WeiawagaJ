@@ -208,9 +208,8 @@ public class Search {
                 alpha = 0;
         }
 
-        if (bestMove != null) {
-            TranspTable.set(board.hash(), alpha, depth, ttFlag, bestMove);
-        }
+        if (bestMove != null) TranspTable.set(board.hash(), alpha, depth, ttFlag, bestMove);
+
         return alpha;
     }
 
