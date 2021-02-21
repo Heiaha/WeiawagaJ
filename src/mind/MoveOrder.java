@@ -159,7 +159,7 @@ public class MoveOrder {
         }
     }
 
-    public static void SortNextBestMove(MoveList moves, int curIndex){
+    public static void sortNextBestMove(MoveList moves, int curIndex){
         int max = Integer.MIN_VALUE;
         int maxIndex = -1;
         for (int i = curIndex; i < moves.size(); i++){

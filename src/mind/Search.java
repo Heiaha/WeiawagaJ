@@ -6,13 +6,14 @@ import java.util.Objects;
 public class Search {
     public static int maxSearchDepth;
     public static boolean waitForStop = false;
+    public final static int INF = 999999;
 
     private final static int NULL_MIN_DEPTH = 5;
     private final static int LMR_MIN_DEPTH = 4;
     private final static int LMR_MOVES_WO_REDUCTION = 3;
     private final static int LMR_MOVES_WITHOUT_SECOND_REDUCTION = 6;
     private final static int ASPIRATION_WINDOW = 25;
-    private final static int INF = 999999;
+
 
     private static boolean stop;
     private static Move IDMove = null;
@@ -54,12 +55,10 @@ public class Search {
     }
 
     public static void negaMaxRoot(Board board, int depth, int alpha, int beta){
-
-        boolean inCheck = board.kingAttacked();
         int value = 0;
-        if (inCheck) ++depth;
-
         MoveList moves = board.generateLegalMoves();
+        boolean inCheck = board.checkers() != 0;
+        if (inCheck) ++depth;
         if (moves.size() == 1) {
             IDMove = moves.get(0);
             IDScore = 0;
@@ -69,7 +68,7 @@ public class Search {
         MoveOrder.scoreMoves(board, moves, 0);
         Move bestMove = Move.nullMove;
         for (int i = 0; i < moves.size(); i++){
-            MoveOrder.SortNextBestMove(moves, i);
+            MoveOrder.sortNextBestMove(moves, i);
             Move move = moves.get(i);
 
             board.push(move);
@@ -121,7 +120,7 @@ public class Search {
         }
 
         inCheck = board.kingAttacked();
-        if (inCheck) ++depth;
+        if (inCheck) depth++;
 
         if (depth <= 0) return qSearch(board, depth, ply, alpha, beta);
         Statistics.nodes++;
@@ -170,7 +169,7 @@ public class Search {
         Move bestMove = Move.nullMove;
         MoveOrder.scoreMoves(board, moves, ply);
         for (int i = 0; i < moves.size(); i++){
-            MoveOrder.SortNextBestMove(moves, i);
+            MoveOrder.sortNextBestMove(moves, i);
             Move move = moves.get(i);
             board.push(move);
 
@@ -184,6 +183,7 @@ public class Search {
 
             value = -negaMax(board, reducedDepth - 1, ply + 1, -beta, -alpha, true);
             board.pop();
+            if (stop) return 0;
 
             if (value > alpha){
                 bestMove = move;
@@ -236,7 +236,7 @@ public class Search {
         MoveList moves = board.generateLegalQMoves();
         MoveOrder.scoreMoves(board, moves, ply);
         for (int i = 0; i < moves.size(); i++) {
-            MoveOrder.SortNextBestMove(moves, i);
+            MoveOrder.sortNextBestMove(moves, i);
             Move move = moves.get(i);
 
             board.push(move);

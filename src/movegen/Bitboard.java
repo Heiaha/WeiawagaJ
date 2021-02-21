@@ -18,7 +18,7 @@ public class Bitboard {
     private final static long WHITE_OO_BLOCKERS_AND_ATTACKERS_MASK = 0x60L;
     private final static long WHITE_OOO_BLOCKERS_AND_ATTACKERS_MASK = 0xeL;
 
-    public final static long BLACK_OO_MASK = 0x9000000000000000L;
+    private final static long BLACK_OO_MASK = 0x9000000000000000L;
     private final static long BLACK_OOO_MASK = 0x1100000000000000L;
 
     private final static long BLACK_OO_BLOCKERS_AND_ATTACKERS_MASK = 0x6000000000000000L;

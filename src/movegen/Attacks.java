@@ -139,8 +139,8 @@ public class Attacks {
             subset = 0;
             do {
                 index = subset;
-                index = index * BISHOP_MAGICS[sq];
-                index = index >>> BISHOP_SHIFTS[sq];
+                index *= BISHOP_MAGICS[sq];
+                index >>>= BISHOP_SHIFTS[sq];
                 BISHOP_ATTACKS[sq][(int)index] = getBishopAttacksSlow(sq, subset);
                 subset = (subset - BISHOP_ATTACK_MASKS[sq]) & BISHOP_ATTACK_MASKS[sq];
             } while(subset != 0L);
@@ -164,9 +164,9 @@ public class Attacks {
             subset = 0;
             do {
                 index = subset;
-                index = index * ROOK_MAGICS[sq];
-                index = index >>> ROOK_SHIFTS[sq];
-                ROOK_ATTACKS[sq][(int) index] = getRookAttacksSlow(sq, subset);
+                index *= ROOK_MAGICS[sq];
+                index >>>= ROOK_SHIFTS[sq];
+                ROOK_ATTACKS[sq][(int)index] = getRookAttacksSlow(sq, subset);
                 subset = (subset - ROOK_ATTACK_MASKS[sq]) & ROOK_ATTACK_MASKS[sq];
             } while (subset != 0);
         }

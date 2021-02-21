@@ -24,6 +24,7 @@ public class UCIClient {
         System.out.println("Homepage and source code: https://github.com/Heiaha/Weiawaga");
         Scanner inputStream = new Scanner(System.in);
         board = new Board();
+        Search.negaMax(board, 1,1, -Search.INF, Search.INF, false); // initialize
 
         while (true) {
             String input = inputStream.nextLine();

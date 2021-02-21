@@ -26,8 +26,6 @@ public class Square {
             "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
     };
 
-
-
     public final static int NORTH = 8, SOUTH = -8, EAST = 1, WEST = -1, NORTH_EAST = NORTH + EAST, NORTH_WEST = NORTH + WEST,
             SOUTH_WEST = SOUTH + WEST, SOUTH_EAST = SOUTH + EAST, NORTH_NORTH = NORTH + NORTH, SOUTH_SOUTH = SOUTH + SOUTH;
 
@@ -40,13 +38,13 @@ public class Square {
     }
 
     public final static Map<String, Integer> NAME_MAP = new HashMap<>();
-    static{
+    static {
         for (int sq = Square.A1; sq <= Square.H8; sq++)
             NAME_MAP.put(SQUARE_NAMES[sq], sq);
     }
 
     private final static int[] SQ_MIRROR = new int[64];
-    static{
+    static {
         for (int sq = A1; sq <= H8; sq++){
             SQ_MIRROR[sq] = sq ^ 0x38;
         }
@@ -54,7 +52,7 @@ public class Square {
 
     public final static int[][] CDISTANCE = new int[64][64];
     public final static int[][] MDISTANCE = new int[64][64];
-    static{
+    static {
         for (int sq1 = Square.A1; sq1 <= Square.H8; sq1++){
             for (int sq2 = Square.A1; sq2 <= Square.H8; sq2++){
                 CDISTANCE[sq1][sq2] = Math.max(Math.abs(Square.getFile(sq1) - Square.getFile(sq2)), Math.abs(Square.getRank(sq1) - Square.getRank(sq2)));
