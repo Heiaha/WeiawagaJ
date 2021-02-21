@@ -11,7 +11,7 @@ public class Board {
     private long materialHash;
     private int gamePly;
 
-    private int phase = 24;
+    private int phase = Evaluation.TOTAL_PHASE;
     private Score materialScore = new Score(0, 0);
     private Score pSqScore = new Score(0, 0);
     private UndoInfo[] history = new UndoInfo[1000];
@@ -37,7 +37,7 @@ public class Board {
     }
 
     public void clear(){
-        phase = 24;
+        phase = Evaluation.TOTAL_PHASE;
         pSqScore = new Score(0, 0);
         materialScore = new Score(0, 0);
         history = new UndoInfo[1000];
@@ -74,14 +74,8 @@ public class Board {
 
         //update incremental evaluation terms
         phase -= Evaluation.PIECE_PHASES[pieceType];
-        if (side == Side.WHITE){
-            materialScore.add(Evaluation.PIECE_TYPE_VALUES[pieceType]);
-            pSqScore.add(Evaluation.PIECE_TABLES[pieceType][square]);
-        }
-        else {
-            materialScore.sub(Evaluation.PIECE_TYPE_VALUES[pieceType]);
-            pSqScore.sub(Evaluation.PIECE_TABLES[pieceType][Square.squareMirror(square)]);
-        }
+        materialScore.relAdd(Evaluation.PIECE_TYPE_VALUES[pieceType], side);
+        pSqScore.relAdd(Evaluation.PIECE_TABLES[pieceType][Square.relativeSquare(square, side)], side);
     }
 
     public void removePiece(int square){
@@ -98,14 +92,9 @@ public class Board {
 
         //update incremental evaluation terms
         phase += Evaluation.PIECE_PHASES[pieceType];
-        if (side == Side.WHITE){
-            materialScore.sub(Evaluation.PIECE_TYPE_VALUES[pieceType]);
-            pSqScore.sub(Evaluation.PIECE_TABLES[pieceType][square]);
-        }
-        else {
-            materialScore.add(Evaluation.PIECE_TYPE_VALUES[pieceType]);
-            pSqScore.add(Evaluation.PIECE_TABLES[pieceType][Square.squareMirror(square)]);
-        }
+
+        materialScore.relSub(Evaluation.PIECE_TYPE_VALUES[pieceType], side);
+        pSqScore.relSub(Evaluation.PIECE_TABLES[pieceType][Square.relativeSquare(square, side)], side);
     }
 
     public void movePiece(int fromSq, int toSq){
@@ -128,20 +117,10 @@ public class Board {
 
         //update incremental evaluation terms
         phase += Evaluation.PIECE_PHASES[capturedPieceType];
-        if (sideMoving == Side.WHITE){
-            pSqScore.sub(Evaluation.PIECE_TABLES[movingPieceType][fromSq]);
-            pSqScore.add(Evaluation.PIECE_TABLES[movingPieceType][toSq]);
-            pSqScore.add(Evaluation.PIECE_TABLES[capturedPieceType][Square.squareMirror(toSq)]);
-            materialScore.add(Evaluation.PIECE_TYPE_VALUES[capturedPieceType]);
-
-        }
-        else {
-            pSqScore.add(Evaluation.PIECE_TABLES[movingPieceType][Square.squareMirror(fromSq)]);
-            pSqScore.sub(Evaluation.PIECE_TABLES[movingPieceType][Square.squareMirror(toSq)]);
-            pSqScore.sub(Evaluation.PIECE_TABLES[capturedPieceType][toSq]);
-            materialScore.sub(Evaluation.PIECE_TYPE_VALUES[capturedPieceType]);
-        }
-
+        pSqScore.relSub(Evaluation.PIECE_TABLES[movingPieceType][Square.relativeSquare(fromSq, sideMoving)], sideMoving);
+        pSqScore.relAdd(Evaluation.PIECE_TABLES[movingPieceType][Square.relativeSquare(toSq, sideMoving)], sideMoving);
+        pSqScore.relAdd(Evaluation.PIECE_TABLES[capturedPieceType][Square.relativeSquare(toSq, Side.flip(sideMoving))], sideMoving);
+        materialScore.relAdd(Evaluation.PIECE_TYPE_VALUES[capturedPieceType], sideMoving);
     }
 
     public void movePieceQuiet(int fromSq, int toSq){
@@ -158,14 +137,8 @@ public class Board {
         board[fromSq] = Piece.NONE;
 
         //update incremental evaluation terms
-        if (side == Side.WHITE){
-            pSqScore.sub(Evaluation.PIECE_TABLES[pieceType][fromSq]);
-            pSqScore.add(Evaluation.PIECE_TABLES[pieceType][toSq]);
-        }
-        else {
-            pSqScore.add(Evaluation.PIECE_TABLES[pieceType][Square.squareMirror(fromSq)]);
-            pSqScore.sub(Evaluation.PIECE_TABLES[pieceType][Square.squareMirror(toSq)]);
-        }
+        pSqScore.relSub(Evaluation.PIECE_TABLES[pieceType][Square.relativeSquare(fromSq, side)], side);
+        pSqScore.relAdd(Evaluation.PIECE_TABLES[pieceType][Square.relativeSquare(toSq, side)], side);
     }
 
     public long hash(){

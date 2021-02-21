@@ -118,8 +118,6 @@ public class Square {
     public static int getMDistance(int sq1, int sq2){
         return MDISTANCE[sq1][sq2];
     }
-
-
 }
 
 

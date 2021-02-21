@@ -7,11 +7,11 @@ public class Search {
     public static int maxSearchDepth;
     public static boolean waitForStop = false;
 
-    private final static int NullMinDepth = 5;
-    private final static int LMRMinDepth = 4;
-    private final static int LMRMovesWOReduction = 3;
-    private final static int LMRMovesWOSecondReduction = 6;
-    private final static int AspirationWindow = 25;
+    private final static int NULL_MIN_DEPTH = 5;
+    private final static int LMR_MIN_DEPTH = 4;
+    private final static int LMR_MOVES_WO_REDUCTION = 3;
+    private final static int LMR_MOVES_WITHOUT_SECOND_REDUCTION = 6;
+    private final static int ASPIRATION_WINDOW = 25;
     private final static int INF = 999999;
 
     private static boolean stop;
@@ -45,8 +45,8 @@ public class Search {
             }
             else {
                 printInfo(board, depth);
-                alpha = IDScore - AspirationWindow;
-                beta = IDScore + AspirationWindow;
+                alpha = IDScore - ASPIRATION_WINDOW;
+                beta = IDScore + ASPIRATION_WINDOW;
                 depth++;
                 Statistics.reset();
             }
@@ -71,9 +71,11 @@ public class Search {
         for (int i = 0; i < moves.size(); i++){
             MoveOrder.SortNextBestMove(moves, i);
             Move move = moves.get(i);
+
             board.push(move);
             value = -negaMax(board, depth - 1, 1, -beta, -alpha, true);
             board.pop();
+
             if (stop || Limits.checkLimits()) {
                 stop = true;
                 break;
@@ -176,7 +178,7 @@ public class Search {
             int reducedDepth = depth;
             if (canApplyLMR(board, depth, move, ply, i, inCheck)) {
                 reducedDepth -= 1;
-                if (i > LMRMovesWOSecondReduction)
+                if (i > LMR_MOVES_WITHOUT_SECOND_REDUCTION)
                     reducedDepth -= 1;
             }
 
@@ -259,14 +261,14 @@ public class Search {
     public static boolean canApplyNullWindow(Board board, int depth, int beta, boolean inCheck, boolean canApplyNull){
         return canApplyNull &&
                 !inCheck &&
-                depth >= NullMinDepth &&
+                depth >= NULL_MIN_DEPTH &&
                 (board.phase() < Evaluation.PIECE_PHASES[PieceType.QUEEN] + Evaluation.PIECE_PHASES[PieceType.BISHOP]) && // One queen + minor piece
                 Evaluation.evaluateState(board) >= beta;
     }
 
     public static boolean canApplyLMR(Board board, int depth, Move move, int ply, int moveIndex, boolean fromCheck){
-        return depth >= LMRMinDepth &&
-                moveIndex >= LMRMovesWOReduction &&
+        return depth >= LMR_MIN_DEPTH &&
+                moveIndex >= LMR_MOVES_WO_REDUCTION &&
                 move.flags() == Move.QUIET &&
                 !fromCheck &&
                 !MoveOrder.isKiller(board, move, ply) &&

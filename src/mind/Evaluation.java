@@ -8,7 +8,7 @@ public class Evaluation {
     public static long allBlackPieces;
     public static long allPieces;
 
-    final static int TOTAL_PHASE = 24;
+    public final static int TOTAL_PHASE = 24;
     public final static int[] PIECE_PHASES = {0, 1, 1, 2, 4, 0};
 
     final static Score TEMPO = new Score(20, 10);

@@ -1,5 +1,7 @@
 package mind;
 
+import movegen.Side;
+
 public class Score {
     public int mg;
     public int eg;
@@ -27,6 +29,12 @@ public class Score {
     public void add(Score other){
         this.mg += other.mg;
         this.eg += other.eg;
+    }
+
+    public void relAdd(Score other, int side){
+        if (side == Side.WHITE) this.add(other);
+        else this.sub(other);
+
     }
 
     public void add(int mg, int eg){
@@ -57,6 +65,11 @@ public class Score {
     public void sub(int value){
         this.mg -= value;
         this.eg -= value;
+    }
+
+    public void relSub(Score other, int side){
+        if (side == Side.WHITE) this.sub(other);
+        else this.add(other);
     }
 
     public int eval(int phase){
