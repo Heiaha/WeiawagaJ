@@ -67,7 +67,7 @@ public class Search {
         }
 
         MoveOrder.scoreMoves(board, moves, 0);
-        Move bestMove = null;
+        Move bestMove = Move.nullMove;
         for (int i = 0; i < moves.size(); i++){
             MoveOrder.SortNextBestMove(moves, i);
             Move move = moves.get(i);
@@ -83,16 +83,16 @@ public class Search {
             if (value > alpha){
                 bestMove = move;
                 if (value >= beta){
-                    TranspTable.set(board.hash(), beta, depth, TTEntry.LOWER_BOUND, bestMove);
+                    TranspTable.set(board.hash(), beta, depth, TTEntry.BETA, bestMove);
                     IDMove = bestMove;
                     IDScore = beta;
                     return;
                 }
                 alpha = value;
-                TranspTable.set(board.hash(), alpha, depth, TTEntry.UPPER_BOUND, bestMove);
+                TranspTable.set(board.hash(), alpha, depth, TTEntry.ALPHA, bestMove);
             }
         }
-        if (bestMove == null)
+        if (bestMove.equals(Move.nullMove))
             bestMove = moves.get(0);
 
         if (!stop) {
@@ -105,7 +105,7 @@ public class Search {
     public static int negaMax(Board board, int depth, int ply, int alpha, int beta, boolean canApplyNull){
         int mateValue = INF - ply;
         boolean inCheck;
-        int ttFlag = TTEntry.UPPER_BOUND;
+        int ttFlag = TTEntry.ALPHA;
 
         if (stop || Limits.checkLimits()) {
             stop = true;
@@ -139,10 +139,10 @@ public class Search {
                 case TTEntry.EXACT:
                     Statistics.leafs++;
                     return ttEntry.score();
-                case TTEntry.UPPER_BOUND:
+                case TTEntry.ALPHA:
                     beta = Math.min(beta, ttEntry.score());
                     break;
-                case TTEntry.LOWER_BOUND:
+                case TTEntry.BETA:
                     alpha = Math.max(alpha, ttEntry.score());
                     break;
             }
@@ -167,7 +167,7 @@ public class Search {
 
         MoveList moves = board.generateLegalMoves();
         int value;
-        Move bestMove = null;
+        Move bestMove = Move.nullMove();
         MoveOrder.scoreMoves(board, moves, ply);
         for (int i = 0; i < moves.size(); i++){
             MoveOrder.SortNextBestMove(moves, i);
@@ -193,7 +193,7 @@ public class Search {
                         MoveOrder.addHistory(move, depth);
                     }
                     Statistics.betaCutoffs++;
-                    ttFlag = TTEntry.LOWER_BOUND;
+                    ttFlag = TTEntry.BETA;
                     alpha = beta;
                     break;
                 }
@@ -210,7 +210,7 @@ public class Search {
                 alpha = 0;
         }
 
-        if (bestMove != null) TranspTable.set(board.hash(), alpha, depth, ttFlag, bestMove);
+        if (!stop) TranspTable.set(board.hash(), alpha, depth, ttFlag, bestMove);
 
         return alpha;
     }

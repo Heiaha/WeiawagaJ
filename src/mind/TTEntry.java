@@ -2,7 +2,7 @@ package mind;
 import movegen.*;
 
 public class TTEntry {
-    public final static int EXACT = 0, LOWER_BOUND = 1, UPPER_BOUND = 2;
+    public final static int EXACT = 0, BETA = 1, ALPHA = 2;
 
     private final long key;
     private final int score, depth, flag;

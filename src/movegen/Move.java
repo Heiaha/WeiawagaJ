@@ -6,6 +6,7 @@ public class Move {
         PR_KNIGHT = 0b0100, PR_BISHOP = 0b0101, PR_ROOK = 0b0110, PR_QUEEN = 0b0111,
         PC_KNIGHT = 0b1100, PC_BISHOP = 0b1101, PC_ROOK = 0b1110, PC_QUEEN = 0b1111, NULL = 0b1001;
 
+    public final static Move nullMove = new Move(Square.NO_SQUARE, Square.NO_SQUARE, Move.NULL);
     private final int move;
     private int sortScore;
 
