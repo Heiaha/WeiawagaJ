@@ -2,22 +2,16 @@ package mind;
 import movegen.*;
 
 public class TTEntry {
-    public final static int EXACT = 0, BETA = 1, ALPHA = 2;
+    public final static int EXACT = 0, LOWER_BOUND = 1, UPPER_BOUND = 2;
 
-    private final long key;
     private final int score, depth, flag;
     private final int bestMove;
 
-    public TTEntry(long key_, int score_, int depth_, int flag_, Move bestMove_){
-        key = key_;
+    public TTEntry(int score_, int depth_, int flag_, Move bestMove_){
         score = score_;
         depth = depth_;
         flag = flag_;
         bestMove = bestMove_.move();
-    }
-
-    public long key(){
-        return key;
     }
 
     public int score(){

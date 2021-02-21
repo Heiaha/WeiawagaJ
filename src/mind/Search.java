@@ -83,13 +83,13 @@ public class Search {
             if (value > alpha){
                 bestMove = move;
                 if (value >= beta){
-                    TranspTable.set(board.hash(), beta, depth, TTEntry.BETA, bestMove);
+                    TranspTable.set(board.hash(), beta, depth, TTEntry.LOWER_BOUND, bestMove);
                     IDMove = bestMove;
                     IDScore = beta;
                     return;
                 }
                 alpha = value;
-                TranspTable.set(board.hash(), alpha, depth, TTEntry.ALPHA, bestMove);
+                TranspTable.set(board.hash(), alpha, depth, TTEntry.UPPER_BOUND, bestMove);
             }
         }
         if (bestMove.equals(Move.nullMove))
@@ -105,7 +105,7 @@ public class Search {
     public static int negaMax(Board board, int depth, int ply, int alpha, int beta, boolean canApplyNull){
         int mateValue = INF - ply;
         boolean inCheck;
-        int ttFlag = TTEntry.ALPHA;
+        int ttFlag = TTEntry.UPPER_BOUND;
 
         if (stop || Limits.checkLimits()) {
             stop = true;
@@ -139,11 +139,11 @@ public class Search {
                 case TTEntry.EXACT:
                     Statistics.leafs++;
                     return ttEntry.score();
-                case TTEntry.ALPHA:
-                    beta = Math.min(beta, ttEntry.score());
-                    break;
-                case TTEntry.BETA:
+                case TTEntry.LOWER_BOUND:
                     alpha = Math.max(alpha, ttEntry.score());
+                    break;
+                case TTEntry.UPPER_BOUND:
+                    beta = Math.min(beta, ttEntry.score());
                     break;
             }
             if (alpha >= beta) {
@@ -167,7 +167,7 @@ public class Search {
 
         MoveList moves = board.generateLegalMoves();
         int value;
-        Move bestMove = Move.nullMove();
+        Move bestMove = Move.nullMove;
         MoveOrder.scoreMoves(board, moves, ply);
         for (int i = 0; i < moves.size(); i++){
             MoveOrder.SortNextBestMove(moves, i);
@@ -193,7 +193,7 @@ public class Search {
                         MoveOrder.addHistory(move, depth);
                     }
                     Statistics.betaCutoffs++;
-                    ttFlag = TTEntry.BETA;
+                    ttFlag = TTEntry.LOWER_BOUND;
                     alpha = beta;
                     break;
                 }

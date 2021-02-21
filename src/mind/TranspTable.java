@@ -7,7 +7,7 @@ public class TranspTable {
     private final static HashMap<Long, TTEntry> table = new HashMap<>();
 
     public static void set(long key, int score, int depth, int flag, Move bestMove){
-        table.put(key, new TTEntry(key, score, depth, flag, bestMove));
+        table.put(key, new TTEntry(score, depth, flag, bestMove));
     }
 
     public static TTEntry probe(long key){
