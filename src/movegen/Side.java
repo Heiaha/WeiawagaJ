@@ -5,7 +5,7 @@ public class Side {
     public final static int BLACK = 1;
 
     public static int flip(int side){
-        return WHITE == side ? BLACK : WHITE;
+        return BLACK ^ side;
     }
 
 }
