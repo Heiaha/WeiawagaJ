@@ -47,7 +47,7 @@ public class Piece {
             case BLACK_ROOK -> "r";
             case BLACK_QUEEN -> "q";
             case BLACK_KING -> "k";
-            default -> "";
+            default -> ".";
         };
 
     }

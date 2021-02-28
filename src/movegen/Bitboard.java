@@ -83,7 +83,7 @@ public class Bitboard {
                 if (Square.getFile(sq1) == Square.getFile(sq2) || Square.getRank(sq1) == Square.getRank(sq2))
                     BB_LINES[sq1][sq2] =
                             Attacks.getRookAttacksSlow(sq1, 0) & Attacks.getRookAttacksSlow(sq2, 0);
-                else if (Square.getDiagonal(sq1) == Square.getDiagonal(sq1) || Square.getAntiDiagonal(sq1) == Square.getAntiDiagonal(sq2))
+                else if (Square.getDiagonal(sq1) == Square.getDiagonal(sq2) || Square.getAntiDiagonal(sq1) == Square.getAntiDiagonal(sq2))
                     BB_LINES[sq1][sq2] =
                             Attacks.getBishopAttacksSlow(sq1, 0) & Attacks.getBishopAttacksSlow(sq2, 0);
             }

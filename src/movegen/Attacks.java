@@ -191,8 +191,8 @@ public class Attacks {
     }
 
     public static long getRookAttacksSlow(int sq, long blockers){
-        long attacks = 0;
 
+        long attacks = 0;
         attacks |= Bitboard.getRay(Square.NORTH, sq);
         if ((Bitboard.getRay(Square.NORTH, sq) & blockers) != 0L)
             attacks &= ~(Bitboard.getRay(Square.NORTH, Bitboard.lsb(Bitboard.getRay(Square.NORTH, sq) & blockers)));
@@ -213,6 +213,7 @@ public class Attacks {
     }
 
     public static long getBishopAttacksSlow(int sq, long blockers){
+
         long attacks = 0;
 
         attacks |= Bitboard.getRay(Square.NORTH_WEST, sq);

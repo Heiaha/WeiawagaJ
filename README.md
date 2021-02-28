@@ -33,3 +33,5 @@ https://lichess.org/@/Weiawaga
     - [History heuristic](https://www.chessprogramming.org/History_Heuristic)
   - Other
     - [Zobrist hashing](https://www.chessprogramming.org/Zobrist_Hashing) / [Transposition table](https://en.wikipedia.org/wiki/Transposition_table)
+
+Move generation inspired by [surge](https://github.com/nkarve/surge).

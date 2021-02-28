@@ -23,6 +23,10 @@ public class Board {
         setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     }
 
+    public Board(String str) {
+        setFen(str);
+    }
+
     public Board(boolean clear){
         if (!clear)
             setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
@@ -623,7 +627,8 @@ public class Board {
 
                 if (history[gamePly].epsq != Square.NO_SQUARE){
                     //b1 contains pawns that can do an ep capture
-                    b1 = Attacks.pawnAttacks(history[gamePly].epsq, them) & bitboardOf(us, PieceType.PAWN) & notPinned;
+                    b2 = Attacks.pawnAttacks(history[gamePly].epsq, them) & bitboardOf(us, PieceType.PAWN);
+                    b1 = b2 & notPinned;
                     while (b1 != 0) {
                         s = Bitboard.lsb(b1);
                         b1 = Bitboard.extractLsb(b1);
@@ -635,6 +640,9 @@ public class Board {
                         if ((attacks & theirOrthSliders) == 0)
                             moves.add(new Move(s, history[gamePly].epsq, Move.EN_PASSANT));
                     }
+                    b1 = b2 & pinned & Bitboard.line(history[gamePly].epsq, ourKing);
+                    if (b1 != 0)
+                        moves.add(new Move(Bitboard.lsb(b1), history[gamePly].epsq, Move.EN_PASSANT));
                 }
 
                 if (0 == ((history[gamePly].entry & Bitboard.ooMask(us)) | ((all | danger) & Bitboard.ooBlockersMask(us))))
@@ -1195,6 +1203,25 @@ public class Board {
         }
 
         this.push(move);
+    }
+
+
+    public String toString(){
+        String s = "";
+        s += "    A   B   C   D   E   F   G   H\n";
+        for (int i = 56; i >= 0; i -= 8){
+            s += "  +---+---+---+---+---+---+---+---+\n";
+            s += i / 8 + 1 + " ";
+            for (int j = 0; j < 8; j++){
+                s += "| " + Piece.getNotation(board[i + j]) + " ";
+            }
+            s += "| " + (i / 8 + 1)+ "\n";
+        }
+        s += "  +---+---+---+---+---+---+---+---+\n";
+        s += "    A   B   C   D   E   F   G   H\n";
+        s += "FEN: " + getFen() + "\n";
+        s += "Hash: " + String.format("%x", hash) + "\n";
+        return s;
     }
 
 
