@@ -20,10 +20,6 @@ public class Board {
     private long checkers;
     private long pinned;
 
-    public Board(String str) {
-        setFen(str);
-    }
-
     public Board(){
         setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     }
@@ -1228,27 +1224,6 @@ public class Board {
         result += ("Hash: 0x" + String.format("%x", hash) + "\n");
         return result;
     }
-
-
-    public String toString(){
-        String s = "";
-        s += "    A   B   C   D   E   F   G   H\n";
-        for (int i = 56; i >= 0; i -= 8){
-            s += "  +---+---+---+---+---+---+---+---+\n";
-            s += i / 8 + 1 + " ";
-            for (int j = 0; j < 8; j++){
-                s += "| " + Piece.getNotation(board[i + j]) + " ";
-            }
-            s += "| " + (i / 8 + 1)+ "\n";
-        }
-        s += "  +---+---+---+---+---+---+---+---+\n";
-        s += "    A   B   C   D   E   F   G   H\n";
-        s += "FEN: " + getFen() + "\n";
-        s += "Hash: " + String.format("%x", hash) + "\n";
-        return s;
-    }
-
-
 }
 
 
