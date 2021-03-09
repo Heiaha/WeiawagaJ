@@ -27,36 +27,6 @@ public class Bitboard {
 
     public static final long CENTER = 0x1818000000L;
 
-
-    public final static long[][] BB_RAYS = new long[8][64];
-    static {
-        for (int sq = Square.A1; sq <= Square.H8; sq++){
-            // NORTH
-            BB_RAYS[0][sq] = 0x0101010101010100L << sq;
-
-            // SOUTH
-            BB_RAYS[1][sq] = 0x0080808080808080L >>> (63 - sq);
-
-            // EAST
-            BB_RAYS[2][sq] = 2 * (( 1L << (sq | 7)) - (1L << sq));
-
-            // WEST
-            BB_RAYS[3][sq] = (1L << sq) - (1L << (sq & 56));
-
-            //NORTH WEST
-            BB_RAYS[4][sq] = shift(0x0102040810204000L, Square.WEST, 7 - Square.getFile(sq)) << (Square.getRank(sq) * 8);
-
-            //NORTH EAST
-            BB_RAYS[5][sq] = shift(0x8040201008040200L, Square.EAST, Square.getFile(sq)) << (Square.getRank(sq) * 8);
-
-            //SOUTH WEST
-            BB_RAYS[6][sq] = shift(0x0040201008040201L, Square.WEST, 7 - Square.getFile(sq)) >>> ((7 - Square.getRank(sq)) * 8);
-
-            //SOUTH EAST
-            BB_RAYS[7][sq] = shift(0x0002040810204080L, Square.EAST, Square.getFile(sq)) >>> ((7 - Square.getRank(sq)) * 8);
-        }
-    }
-
     //initialize square between
     public final static long[][] BB_SQUARES_BETWEEN = new long[64][64];
     static {
@@ -185,20 +155,21 @@ public class Bitboard {
                 for (int i = 0; i < n; i++)
                     result = (result & ~File.getBb(File.FILE_A)) >>> 9;
                 break;
-        };
+        }
         return result;
     }
 
+    // Slow. Used only for initialization of sliding attacks.
     public static long getRay(int direction, int sq){
         return switch (direction){
-            case Square.NORTH -> BB_RAYS[0][sq];
-            case Square.SOUTH -> BB_RAYS[1][sq];
-            case Square.EAST -> BB_RAYS[2][sq];
-            case Square.WEST -> BB_RAYS[3][sq];
-            case Square.NORTH_WEST -> BB_RAYS[4][sq];
-            case Square.NORTH_EAST -> BB_RAYS[5][sq];
-            case Square.SOUTH_WEST -> BB_RAYS[6][sq];
-            case Square.SOUTH_EAST -> BB_RAYS[7][sq];
+            case Square.NORTH -> 0x0101010101010100L << sq;
+            case Square.SOUTH -> 0x0080808080808080L >>> (63 - sq);
+            case Square.EAST -> 2 * (( 1L << (sq | 7)) - (1L << sq));
+            case Square.WEST -> (1L << sq) - (1L << (sq & 56));
+            case Square.NORTH_WEST -> shift(0x0102040810204000L, Square.WEST, 7 - Square.getFile(sq)) << (Square.getRank(sq) * 8);
+            case Square.NORTH_EAST -> shift(0x8040201008040200L, Square.EAST, Square.getFile(sq)) << (Square.getRank(sq) * 8);
+            case Square.SOUTH_WEST -> shift(0x0040201008040201L, Square.WEST, 7 - Square.getFile(sq)) >>> ((7 - Square.getRank(sq)) * 8);
+            case Square.SOUTH_EAST -> shift(0x0002040810204080L, Square.EAST, Square.getFile(sq)) >>> ((7 - Square.getRank(sq)) * 8);
             default -> 0;
         };
     }
@@ -212,6 +183,15 @@ public class Bitboard {
         return (b << 48) | ((b & 0xffff0000) << 16) |
                 ((b >>> 16) & 0xffff0000) | (b >>> 48);
     }
+
+    public static long passedPawnSpan(int sq, int side) {
+        return Attacks.pawnAttackSpan(sq, side) | File.forwardFileBb(sq, side);
+    }
+
+    public static long pawnSupportSpan(int sq, int side) {
+        return Attacks.pawnAttackSpan(sq + Square.relative_dir(Square.NORTH, side), Side.flip(side));
+    }
+
 
     public static long fill(long bb, int direction){
         switch(direction){

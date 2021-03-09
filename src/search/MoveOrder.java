@@ -1,5 +1,7 @@
-package mind;
+package search;
 
+import evaluation.EConstants;
+import evaluation.Evaluation;
 import movegen.*;
 
 import java.util.Collections;
@@ -29,7 +31,7 @@ public class MoveOrder {
     public static int seeCapture(Board board, Move move){
         int capturedPieceType = board.pieceTypeAt(move.to());
         board.push(move);
-        int value = Evaluation.PIECE_TYPE_VALUES[capturedPieceType].eval(board.phase()) - see(board, move.to());
+        int value = Score.eval(EConstants.PIECE_TYPE_VALUES[capturedPieceType], board.phase()) - see(board, move.to());
         board.pop();
 
         return value;
@@ -39,7 +41,7 @@ public class MoveOrder {
         int value = 0;
         int fromSq = board.smallestAttacker(toSq, board.getSideToPlay());
         if (fromSq != Square.NO_SQUARE){
-            int capturedPieceValue = Evaluation.PIECE_TYPE_VALUES[board.pieceTypeAt(toSq)].eval(board.phase());
+            int capturedPieceValue = Score.eval(EConstants.PIECE_TYPE_VALUES[board.pieceTypeAt(toSq)], board.phase());
             board.push(new Move(fromSq, toSq, Move.CAPTURE));
             value = Math.max(0, capturedPieceValue - see(board, toSq));
             board.pop();

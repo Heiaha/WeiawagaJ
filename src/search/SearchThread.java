@@ -1,4 +1,5 @@
-package mind;
+package search;
+import evaluation.Pawns;
 import movegen.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 

@@ -1,4 +1,4 @@
-package mind;
+package search;
 import movegen.*;
 
 public class Limits {

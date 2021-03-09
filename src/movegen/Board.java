@@ -1,7 +1,7 @@
 package movegen;
 
-import mind.Evaluation;
-import mind.Score;
+import evaluation.EConstants;
+import evaluation.Evaluation;
 
 public class Board {
     private final long[] piece_bb = new long[Piece.NPIECES]; //bitboards
@@ -9,15 +9,20 @@ public class Board {
     private int side_to_play;
     private long hash;
     private long materialHash;
+    private long pawnHash;
     private int gamePly;
 
-    private int phase = Evaluation.TOTAL_PHASE;
-    private Score materialScore = new Score(0, 0);
-    private Score pSqScore = new Score(0, 0);
+    private int phase = EConstants.TOTAL_PHASE;
+    private int materialScore = 0;
+    private int pSqScore = 0;
     private UndoInfo[] history = new UndoInfo[1000];
 
     private long checkers;
     private long pinned;
+
+    public Board(String str) {
+        setFen(str);
+    }
 
     public Board(){
         setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
@@ -41,9 +46,9 @@ public class Board {
     }
 
     public void clear(){
-        phase = Evaluation.TOTAL_PHASE;
-        pSqScore = new Score(0, 0);
-        materialScore = new Score(0, 0);
+        phase = EConstants.TOTAL_PHASE;
+        pSqScore = 0;
+        materialScore = 0;
         history = new UndoInfo[1000];
         side_to_play = Side.WHITE;
         gamePly = 0;
@@ -65,8 +70,11 @@ public class Board {
     }
 
     public void setPieceAt(int piece, int square){
-        int pieceType = Piece.typeOf(piece);
-        int side = Piece.sideOf(piece);
+
+        //update incremental evaluation terms
+        phase -= EConstants.PIECE_PHASES[Piece.typeOf(piece)];
+        pSqScore += EConstants.PIECE_TABLES[piece][square];
+        materialScore += EConstants.PIECE_VALUES[piece];
 
         //set piece on board
         board[square] = piece;
@@ -75,74 +83,46 @@ public class Board {
         //update hashes
         hash ^= Zobrist.ZOBRIST_TABLE[piece][square];
         materialHash ^= Zobrist.ZOBRIST_TABLE[piece][square];
-
-        //update incremental evaluation terms
-        phase -= Evaluation.PIECE_PHASES[pieceType];
-        materialScore.relAdd(Evaluation.PIECE_TYPE_VALUES[pieceType], side);
-        pSqScore.relAdd(Evaluation.PIECE_TABLES[pieceType][Square.relativeSquare(square, side)], side);
+        if (Piece.typeOf(piece) == PieceType.PAWN)
+            pawnHash ^= Zobrist.ZOBRIST_TABLE[piece][square];
     }
 
     public void removePiece(int square){
-        int pieceType = Piece.typeOf(board[square]);
-        int side = Piece.sideOf(board[square]);
+        //update incremental evaluation terms
+        phase += EConstants.PIECE_PHASES[Piece.typeOf(board[square])];
+        pSqScore -= EConstants.PIECE_TABLES[board[square]][square];
+        materialScore -= EConstants.PIECE_VALUES[board[square]];
 
         //update hash tables
         hash ^= Zobrist.ZOBRIST_TABLE[board[square]][square];
         materialHash ^= Zobrist.ZOBRIST_TABLE[board[square]][square];
+        if (Piece.typeOf(board[square]) == PieceType.PAWN)
+            pawnHash ^= Zobrist.ZOBRIST_TABLE[board[square]][square];
 
         //update board
         piece_bb[board[square]] &= ~Square.getBb(square);
         board[square] = Piece.NONE;
-
-        //update incremental evaluation terms
-        phase += Evaluation.PIECE_PHASES[pieceType];
-
-        materialScore.relSub(Evaluation.PIECE_TYPE_VALUES[pieceType], side);
-        pSqScore.relSub(Evaluation.PIECE_TABLES[pieceType][Square.relativeSquare(square, side)], side);
-    }
-
-    public void movePiece(int fromSq, int toSq){
-        int movingPieceType = Piece.typeOf(board[fromSq]);
-        int capturedPieceType = Piece.typeOf(board[toSq]);
-        int sideMoving = Piece.sideOf(board[fromSq]);
-
-        //update hashes
-        hash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq] ^
-                Zobrist.ZOBRIST_TABLE[board[toSq]][toSq];
-        materialHash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq] ^
-                Zobrist.ZOBRIST_TABLE[board[toSq]][toSq];
-        
-        //update board
-        long mask = Square.getBb(fromSq) | Square.getBb(toSq);
-        piece_bb[board[fromSq]] ^= mask;
-        piece_bb[board[toSq]] &= ~mask;
-        board[toSq] = board[fromSq];
-        board[fromSq] = Piece.NONE;
-
-        //update incremental evaluation terms
-        phase += Evaluation.PIECE_PHASES[capturedPieceType];
-        pSqScore.relSub(Evaluation.PIECE_TABLES[movingPieceType][Square.relativeSquare(fromSq, sideMoving)], sideMoving);
-        pSqScore.relAdd(Evaluation.PIECE_TABLES[movingPieceType][Square.relativeSquare(toSq, sideMoving)], sideMoving);
-        pSqScore.relAdd(Evaluation.PIECE_TABLES[capturedPieceType][Square.relativeSquare(toSq, Side.flip(sideMoving))], sideMoving);
-        materialScore.relAdd(Evaluation.PIECE_TYPE_VALUES[capturedPieceType], sideMoving);
     }
 
     public void movePieceQuiet(int fromSq, int toSq){
-        int pieceType = Piece.typeOf(board[fromSq]);
-        int side = Piece.sideOf(board[fromSq]);
+        //update incremental evaluation terms
+        pSqScore += EConstants.PIECE_TABLES[board[fromSq]][toSq] - EConstants.PIECE_TABLES[board[fromSq]][fromSq];
 
         //update hashes
         hash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq];
         materialHash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq];
+        if (Piece.typeOf(board[fromSq]) == PieceType.PAWN)
+            pawnHash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq];
 
         //update board
         piece_bb[board[fromSq]] ^= (Square.getBb(fromSq) | Square.getBb(toSq));
         board[toSq] = board[fromSq];
         board[fromSq] = Piece.NONE;
+    }
 
-        //update incremental evaluation terms
-        pSqScore.relSub(Evaluation.PIECE_TABLES[pieceType][Square.relativeSquare(fromSq, side)], side);
-        pSqScore.relAdd(Evaluation.PIECE_TABLES[pieceType][Square.relativeSquare(toSq, side)], side);
+    public void movePiece(int fromSq, int toSq){
+        removePiece(toSq);
+        movePieceQuiet(fromSq, toSq);
     }
 
     public long hash(){
@@ -151,6 +131,10 @@ public class Board {
 
     public long materialHash(){
         return materialHash;
+    }
+
+    public long pawnHash() {
+        return pawnHash;
     }
 
     public long bitboardOf(int piece){
@@ -544,6 +528,7 @@ public class Board {
             b1 = Bitboard.extractLsb(b1);
         }
 
+
         b1 = theirDiagSliders;
         while (b1 != 0){
             danger |= Attacks.getBishopAttacks(Bitboard.lsb(b1), all ^ Square.getBb(ourKing));
@@ -603,10 +588,20 @@ public class Board {
                         }
                         // FALL THROUGH INTENTIONAL
                     case PieceType.KNIGHT:
+
                         b1 = attackersFrom(checkerSquare, all, us) & notPinned;
                         while (b1 != 0){
-                            moves.add(new Move(Bitboard.lsb(b1), checkerSquare, Move.CAPTURE));
+                            int sq = Bitboard.lsb(b1);
                             b1 = Bitboard.extractLsb(b1);
+                            if (pieceTypeAt(sq) == PieceType.PAWN && Rank.relativeRank(Square.getRank(sq), side_to_play) == Rank.RANK_7){
+                                moves.add(new Move(sq, checkerSquare, Move.PC_QUEEN));
+                                moves.add(new Move(sq, checkerSquare, Move.PC_ROOK));
+                                moves.add(new Move(sq, checkerSquare, Move.PC_KNIGHT));
+                                moves.add(new Move(sq, checkerSquare, Move.PC_BISHOP));
+                            }
+                            else {
+                                moves.add(new Move(sq, checkerSquare, Move.CAPTURE));
+                            }
                         }
                         return moves;
                     default:
@@ -689,6 +684,7 @@ public class Board {
                 break;
 
         }
+
         //non-pinned knight moves.
         b1 = bitboardOf(us, PieceType.KNIGHT) & notPinned;
         while (b1 != 0){
@@ -742,6 +738,7 @@ public class Board {
         b2 = Bitboard.shift(b1, Square.relative_dir(Square.NORTH_WEST, us)) & captureMask;
         b3 = Bitboard.shift(b1, Square.relative_dir(Square.NORTH_EAST, us)) & captureMask;
 
+
         while (b2 != 0){
             s = Bitboard.lsb(b2);
             b2 = Bitboard.extractLsb(b2);
@@ -790,6 +787,7 @@ public class Board {
                 moves.add(new Move(s - Square.relative_dir(Square.NORTH_EAST, us), s, Move.PC_BISHOP));
             }
         }
+
         return moves;
     }
 
@@ -878,16 +876,24 @@ public class Board {
                         // FALL THROUGH INTENTIONAL
                     case PieceType.KNIGHT:
                         b1 = attackersFrom(checkerSquare, all, us) & notPinned;
-                        while (b1 != 0) {
-                            moves.add(new Move(Bitboard.lsb(b1), checkerSquare, Move.CAPTURE));
+                        while (b1 != 0){
+                            int sq = Bitboard.lsb(b1);
                             b1 = Bitboard.extractLsb(b1);
+                            if (pieceTypeAt(sq) == PieceType.PAWN && Rank.relativeRank(Square.getRank(sq), side_to_play) == Rank.RANK_7){
+                                moves.add(new Move(sq, checkerSquare, Move.PC_QUEEN));
+                                moves.add(new Move(sq, checkerSquare, Move.PC_ROOK));
+                                moves.add(new Move(sq, checkerSquare, Move.PC_KNIGHT));
+                                moves.add(new Move(sq, checkerSquare, Move.PC_BISHOP));
+                            }
+                            else {
+                                moves.add(new Move(sq, checkerSquare, Move.CAPTURE));
+                            }
                         }
                         return moves;
                     default:
                         // We have to capture the checker
                         captureMask = checkers;
                         // ...or block it
-                        quietMask = Bitboard.between(ourKing, checkerSquare);
                         break;
                 }
                 break;
@@ -896,8 +902,6 @@ public class Board {
                 // No checkers, we can capture any enemy piece.
                 captureMask = themBb;
 
-                // or move to any square that isn't occupied.
-                quietMask = ~all;
 
                 if (history[gamePly].epsq != Square.NO_SQUARE){
                     //b1 contains pawns that can do an ep capture
@@ -1023,11 +1027,11 @@ public class Board {
         return gamePly;
     }
 
-    public Score materialScore(){
+    public int materialScore(){
         return materialScore;
     }
 
-    public Score pSqScore(){
+    public int pSqScore(){
         return pSqScore;
     }
 
@@ -1203,6 +1207,26 @@ public class Board {
         }
 
         this.push(move);
+    }
+
+    @Override
+    public String toString() {
+        String result = "";
+        String s = "   +---+---+---+---+---+---+---+---+\n";
+        String t = "     A   B   C   D   E   F   G   H\n";
+        result += t;
+        for (int i = 56; i >= 0; i -= 8) {
+            result += (s + " " + (i/8 + 1) + " ");
+            for (int j = 0; j < 8; j++)
+                result += ("| " + Piece.getNotation(board[i + j]) + " ");
+            result += ("| " + (i/8 + 1) + "\n");
+        }
+        result += s ;
+        result += (t + "\n");
+
+        result += ("Fen: " + getFen() + "\n");
+        result += ("Hash: 0x" + String.format("%x", hash) + "\n");
+        return result;
     }
 
 

@@ -1,5 +1,9 @@
-import mind.*;
+import evaluation.Evaluation;
+import search.*;
 import movegen.*;
+import texel.Tuner;
+
+import java.io.IOException;
 import java.util.Scanner;
 
 public class UCIClient {
@@ -13,18 +17,17 @@ public class UCIClient {
     private final static String QUIT = "quit";
     private final static String UCINEWGAME = "ucinewgame";
     private final static String POSITIONFEN = "position fen";
+    private final static String TUNE = "tune";
     private final static int DEFAULT_MAX_SEARCH_DEPTH = 99;
+
 
     private final static SearchThread thread = new SearchThread();
     private static Board board = new Board();
 
-
-    public static void run() {
-        System.out.println("Weiawaga v1.4, February 14, 2021");
+    public static void run() throws IOException {
+        System.out.println("Weiawaga v2.0, March 8, 2021");
         System.out.println("Homepage and source code: https://github.com/Heiaha/Weiawaga");
         Scanner inputStream = new Scanner(System.in);
-        board = new Board();
-        Search.negaMax(board, 1,1, -Search.INF, Search.INF, false); // initialize
 
         while (true) {
             String input = inputStream.nextLine();
@@ -48,7 +51,12 @@ public class UCIClient {
                 thread.stop();
             }
             else if (input.equals("evaluate"))
-                System.out.println(Evaluation.evaluateState(board));
+                System.out.println(Evaluation.evaluateForTune(board));
+            else if (input.startsWith(TUNE)){
+                String file = input.split(" ")[1];
+                Tuner.setup(file);
+                Tuner.tune();
+            }
         }
     }
 

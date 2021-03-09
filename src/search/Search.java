@@ -1,4 +1,5 @@
-package mind;
+package search;
+import evaluation.*;
 import movegen.*;
 
 import java.util.Objects;
@@ -262,7 +263,7 @@ public class Search {
         return canApplyNull &&
                 !inCheck &&
                 depth >= NULL_MIN_DEPTH &&
-                (board.phase() < Evaluation.PIECE_PHASES[PieceType.QUEEN] + Evaluation.PIECE_PHASES[PieceType.BISHOP]) && // One queen + minor piece
+                (board.phase() < EConstants.PIECE_PHASES[PieceType.QUEEN] + EConstants.PIECE_PHASES[PieceType.BISHOP]) && // One queen + minor piece
                 Evaluation.evaluateState(board) >= beta;
     }
 

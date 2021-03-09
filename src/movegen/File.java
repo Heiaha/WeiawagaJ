@@ -37,7 +37,11 @@ public class File {
         return BB_ADJACENT[file];
     }
 
-    public  static long forwardFileBb(int side, int sq){
-        return Rank.forwardRanksBb(side, sq) & Square.getFileBb(sq);
+    public static long forwardFileBb(int sq, int side){
+        return Rank.forwardRanksBb(sq, side) & Square.getFileBb(sq);
     }
+    public static long backwardFileBb(int sq, int side) {
+        return Rank.forwardRanksBb(sq, Side.flip(side)) & Square.getFileBb(sq);
+    }
+
 }

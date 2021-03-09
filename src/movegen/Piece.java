@@ -16,10 +16,9 @@ public class Piece {
     public final static int BLACK_KING = 13;
     public final static int NONE = 14;
 
-    public final static int[] PIECES = { WHITE_PAWN, WHITE_KNIGHT, WHITE_BISHOP, WHITE_ROOK, WHITE_QUEEN, WHITE_KING,
-                                         BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN, BLACK_KING };
-
     public final static int NPIECES = 15;
+
+    public static int flip(int piece) { return piece ^ 8; }
 
     public static int typeOf(int piece){
         return piece & 0b111;
@@ -47,7 +46,7 @@ public class Piece {
             case BLACK_ROOK -> "r";
             case BLACK_QUEEN -> "q";
             case BLACK_KING -> "k";
-            default -> ".";
+            default -> " ";
         };
 
     }

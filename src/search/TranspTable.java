@@ -1,4 +1,4 @@
-package mind;
+package search;
 
 import movegen.Move;
 import java.util.HashMap;

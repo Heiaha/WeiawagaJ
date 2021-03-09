@@ -240,6 +240,16 @@ public class Attacks {
                                     Bitboard.shift(bb, Square.SOUTH_WEST) | Bitboard.shift(bb, Square.SOUTH_EAST);
     }
 
+    public static long pawnAttackSpan(int sq, int side) {
+        return Rank.forwardRanksBb(sq, side) & Square.getAdjacentFileBb(sq);
+    }
+
+    public static long pawnDoubleAttacks(long bb, int side) {
+        return side == Side.WHITE ? Bitboard.shift(bb, Square.NORTH_WEST) & Bitboard.shift(bb, Square.NORTH_EAST) :
+                                    Bitboard.shift(bb, Square.SOUTH_WEST) & Bitboard.shift(bb, Square.SOUTH_EAST);
+    }
+
+
     public static long pawnAttacks(int square, int side){
         return PAWN_ATTACKS[side][square];
     }

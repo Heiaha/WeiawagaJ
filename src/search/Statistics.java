@@ -1,4 +1,4 @@
-package mind;
+package search;
 
 public class Statistics {
     public static int leafs = 0;
