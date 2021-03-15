@@ -2,16 +2,18 @@ package search;
 import movegen.*;
 
 public class TTEntry {
-    public final static int EXACT = 0, LOWER_BOUND = 1, UPPER_BOUND = 2;
+    public final static byte EXACT = 0, LOWER_BOUND = 1, UPPER_BOUND = 2;
+    public final static int SIZE = 10; // in bytes
 
-    private final int score, depth, flag;
+    private final int score;
+    private final byte depth, flag;
     private final int bestMove;
 
-    public TTEntry(int score_, int depth_, int flag_, Move bestMove_){
-        score = score_;
-        depth = depth_;
-        flag = flag_;
-        bestMove = bestMove_.move();
+    public TTEntry(int score, int depth, int flag, Move bestMove){
+        this.score = score;
+        this.depth = (byte)depth;
+        this.flag = (byte)flag;
+        this.bestMove = bestMove.move();
     }
 
     public int score(){

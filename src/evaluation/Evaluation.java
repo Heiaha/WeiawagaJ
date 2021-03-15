@@ -14,7 +14,7 @@ public class Evaluation {
     public static void initEval( Board board){
         allWhitePieces = board.allPieces(Side.WHITE);
         allBlackPieces = board.allPieces(Side.BLACK);
-        allPieces = allWhitePieces | allBlackPieces;
+        allPieces = allWhitePieces ^ allBlackPieces;
         whiteKingSq = Bitboard.lsb(board.bitboardOf(Piece.WHITE_KING));
         blackKingSq = Bitboard.lsb(board.bitboardOf(Piece.BLACK_KING));
     }

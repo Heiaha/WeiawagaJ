@@ -9,7 +9,6 @@ public class Board {
     private int side_to_play;
     private long hash;
     private long materialHash;
-    private long pawnHash;
     private int gamePly;
 
     private int phase = EConstants.TOTAL_PHASE;
@@ -79,8 +78,6 @@ public class Board {
         //update hashes
         hash ^= Zobrist.ZOBRIST_TABLE[piece][square];
         materialHash ^= Zobrist.ZOBRIST_TABLE[piece][square];
-        if (Piece.typeOf(piece) == PieceType.PAWN)
-            pawnHash ^= Zobrist.ZOBRIST_TABLE[piece][square];
     }
 
     public void removePiece(int square){
@@ -92,8 +89,6 @@ public class Board {
         //update hash tables
         hash ^= Zobrist.ZOBRIST_TABLE[board[square]][square];
         materialHash ^= Zobrist.ZOBRIST_TABLE[board[square]][square];
-        if (Piece.typeOf(board[square]) == PieceType.PAWN)
-            pawnHash ^= Zobrist.ZOBRIST_TABLE[board[square]][square];
 
         //update board
         piece_bb[board[square]] &= ~Square.getBb(square);
@@ -107,8 +102,6 @@ public class Board {
         //update hashes
         hash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq];
         materialHash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq];
-        if (Piece.typeOf(board[fromSq]) == PieceType.PAWN)
-            pawnHash ^= Zobrist.ZOBRIST_TABLE[board[fromSq]][fromSq] ^ Zobrist.ZOBRIST_TABLE[board[fromSq]][toSq];
 
         //update board
         piece_bb[board[fromSq]] ^= (Square.getBb(fromSq) | Square.getBb(toSq));
@@ -127,10 +120,6 @@ public class Board {
 
     public long materialHash(){
         return materialHash;
-    }
-
-    public long pawnHash() {
-        return pawnHash;
     }
 
     public long bitboardOf(int piece){
@@ -494,6 +483,16 @@ public class Board {
         return false;
     }
 
+    public boolean hasNonPawnMaterial(int side) {
+        int start = Piece.makePiece(side, PieceType.KNIGHT);
+        int end = Piece.makePiece(side, PieceType.QUEEN);
+        for (int piece = start; piece <= end; piece++){
+            if (bitboardOf(piece) != 0)
+                return true;
+        }
+        return false;
+    }
+
     public MoveList generateLegalMoves(){
         MoveList moves = new MoveList();
         final int us = side_to_play;
@@ -832,7 +831,7 @@ public class Board {
 
         moves.makeC(ourKing, b1 & themBb);
 
-        long captureMask, quietMask;
+        long captureMask;
         int s;
 
         checkers = (Attacks.getKnightAttacks(ourKing) & bitboardOf(them, PieceType.KNIGHT))

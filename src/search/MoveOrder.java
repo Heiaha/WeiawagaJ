@@ -29,12 +29,34 @@ public class MoveOrder {
     }
 
     public static int seeCapture(Board board, Move move){
-        int capturedPieceType = board.pieceTypeAt(move.to());
+        int capturedPieceType;
+        if (move.flags() == Move.EN_PASSANT)
+            capturedPieceType = PieceType.PAWN;
+        else
+            capturedPieceType = board.pieceTypeAt(move.to());
         board.push(move);
-        int value = Score.eval(EConstants.PIECE_TYPE_VALUES[capturedPieceType], board.phase()) - see(board, move.to());
+        int value = 0;
+        if (move.isPromotion())
+            switch(move.flags()){
+                case Move.PC_QUEEN:
+                    value = EConstants.PIECE_TYPE_VALUES[PieceType.QUEEN] + EConstants.PIECE_TYPE_VALUES[capturedPieceType] - see(board, move.to());
+                    break;
+                case Move.PC_ROOK:
+                    value = EConstants.PIECE_TYPE_VALUES[PieceType.ROOK] + EConstants.PIECE_TYPE_VALUES[capturedPieceType] - see(board, move.to());
+                    break;
+                case Move.PC_BISHOP:
+                    value = EConstants.PIECE_TYPE_VALUES[PieceType.BISHOP] + EConstants.PIECE_TYPE_VALUES[capturedPieceType] - see(board, move.to());
+                    break;
+                case Move.PC_KNIGHT:
+                    value = EConstants.PIECE_TYPE_VALUES[PieceType.KNIGHT] + EConstants.PIECE_TYPE_VALUES[capturedPieceType] - see(board, move.to());
+                    break;
+                case Move.CAPTURE:
+                case Move.EN_PASSANT:
+                    value = EConstants.PIECE_TYPE_VALUES[capturedPieceType] - see(board, move.to());
+            }
         board.pop();
 
-        return value;
+        return Score.eval(value, board.phase());
     }
 
     public static int see(Board board, int toSq){
@@ -120,14 +142,14 @@ public class MoveOrder {
         if (moves.size() == 0)
             return;
 
-        Move pvMove = Move.nullMove();
+        Move hashMove = null;
         TTEntry ttEntry = TranspTable.probe(board.hash());
         if (ttEntry != null) {
-            pvMove = ttEntry.move();
+            hashMove = ttEntry.move();
         }
 
         for (Move move : moves) {
-            if (move.equals(pvMove)) {
+            if (move.equals(hashMove)) {
                 move.addToScore(HashMoveScore);
             }
             if (isKiller(board, move, ply)) {

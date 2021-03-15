@@ -26,7 +26,7 @@ public class Perft {
 
     public static long perft(Board board, int depth) {
         MoveList moves = board.generateLegalMoves();
-        if (depth == 0) {
+        if (depth == 1) {
             return moves.size();
         }
         long nodes = 0;

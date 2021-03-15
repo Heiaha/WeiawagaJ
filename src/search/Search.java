@@ -9,10 +9,9 @@ public class Search {
     public static boolean waitForStop = false;
     public final static int INF = 999999;
 
-    private final static int NULL_MIN_DEPTH = 5;
-    private final static int LMR_MIN_DEPTH = 4;
-    private final static int LMR_MOVES_WO_REDUCTION = 3;
-    private final static int LMR_MOVES_WITHOUT_SECOND_REDUCTION = 6;
+    private final static int NULL_MIN_DEPTH = 2;
+    private final static int LMR_MIN_DEPTH = 2;
+    private final static int LMR_MOVES_WO_REDUCTION = 1;
     private final static int ASPIRATION_WINDOW = 25;
 
 
@@ -20,6 +19,15 @@ public class Search {
     private static Move IDMove = null;
     private static int IDScore = 0;
     private static int selDepth;
+    private static final int[][] LMR_TABLE = new int[64][64];
+    static {
+        // Ethereal LMR formula with depth and number of performed moves
+        for (int depth = 1; depth < 64; depth++) {
+            for (int moveNumber = 1; moveNumber < 64; moveNumber++) {
+                LMR_TABLE[depth][moveNumber] = (int) (0.75f + Math.log(depth) * Math.log(moveNumber) / 2.25f);
+            }
+        }
+    }
 
     public Search(){}
 
@@ -34,17 +42,29 @@ public class Search {
         int beta = INF;
         int depth = 1;
         MoveOrder.ageHistory();
+
+        // Deepen until end conditions
         while (depth <= maxSearchDepth || waitForStop) {
+
+            // Check to see if the time has ended
             long elapsed = System.currentTimeMillis() - Limits.startTime;
             if (stop || elapsed >= Limits.timeAllocated / 2 || isScoreCheckmate(IDScore))
                 break;
+
+
             negaMaxRoot(board, depth, alpha, beta);
+
+            // Failed low, adjust window
             if (IDScore <= alpha) {
                 alpha = -INF;
             }
+
+            // Failed high, adjust window
             else if (IDScore >= beta){
                 beta = INF;
             }
+
+            // Adjust the window around the new score and increase the depth
             else {
                 printInfo(board, depth);
                 alpha = IDScore - ASPIRATION_WINDOW;
@@ -56,7 +76,7 @@ public class Search {
     }
 
     public static void negaMaxRoot(Board board, int depth, int alpha, int beta){
-        int value = 0;
+        int value = -INF;
         MoveList moves = board.generateLegalMoves();
         boolean inCheck = board.checkers() != 0;
         if (inCheck) ++depth;
@@ -67,7 +87,7 @@ public class Search {
         }
 
         MoveOrder.scoreMoves(board, moves, 0);
-        Move bestMove = Move.nullMove;
+        Move bestMove = null;
         for (int i = 0; i < moves.size(); i++){
             MoveOrder.sortNextBestMove(moves, i);
             Move move = moves.get(i);
@@ -92,7 +112,7 @@ public class Search {
                 TranspTable.set(board.hash(), alpha, depth, TTEntry.UPPER_BOUND, bestMove);
             }
         }
-        if (bestMove.equals(Move.nullMove))
+        if (bestMove == null)
             bestMove = moves.get(0);
 
         if (!stop) {
@@ -106,6 +126,7 @@ public class Search {
         int mateValue = INF - ply;
         boolean inCheck;
         int ttFlag = TTEntry.UPPER_BOUND;
+        int reducedDepth;
 
         if (stop || Limits.checkLimits()) {
             stop = true;
@@ -121,9 +142,7 @@ public class Search {
         }
 
         inCheck = board.kingAttacked();
-        if (inCheck) depth++;
-
-        if (depth <= 0) return qSearch(board, depth, ply, alpha, beta);
+        if (depth <= 0 && !inCheck) return qSearch(board, depth, ply, alpha, beta);
         Statistics.nodes++;
 
         if (board.isRepetitionOrFifty()) {
@@ -154,9 +173,9 @@ public class Search {
 
         // NULL MOVE
         if (canApplyNullWindow(board, depth, beta, inCheck, canApplyNull)) {
-            int r = depth > 6 ? 3 : 2;
+            int R = depth > 6 ? 3 : 2;
             board.pushNull();
-            int value = -negaMax(board, depth - r - 1, ply, -beta, -beta + 1, false);
+            int value = -negaMax(board, depth - R - 1, ply, -beta, -beta + 1, false);
             board.popNull();
             if (stop) return 0;
             if (value >= beta){
@@ -172,24 +191,25 @@ public class Search {
         for (int i = 0; i < moves.size(); i++){
             MoveOrder.sortNextBestMove(moves, i);
             Move move = moves.get(i);
-            board.push(move);
 
             // LATE MOVE REDUCTION
-            int reducedDepth = depth;
-            if (canApplyLMR(board, depth, move, ply, i, inCheck)) {
-                reducedDepth -= 1;
-                if (i > LMR_MOVES_WITHOUT_SECOND_REDUCTION)
-                    reducedDepth -= 1;
+            reducedDepth = depth;
+            if (canApplyLMR(depth, move, i)) {
+                reducedDepth -= LMR_TABLE[Math.min(depth, 63)][Math.min(i, 63)];
             }
 
+            if (inCheck) reducedDepth++;
+
+            board.push(move);
             value = -negaMax(board, reducedDepth - 1, ply + 1, -beta, -alpha, true);
             board.pop();
+
             if (stop) return 0;
 
             if (value > alpha){
                 bestMove = move;
-                if (value >= beta){
-                    if (move.flags() == Move.QUIET){
+                if (value >= beta) {
+                    if (move.flags() == Move.QUIET) {
                         MoveOrder.addKiller(board, move, ply);
                         MoveOrder.addHistory(move, depth);
                     }
@@ -211,7 +231,7 @@ public class Search {
                 alpha = 0;
         }
 
-        if (!stop) TranspTable.set(board.hash(), alpha, depth, ttFlag, bestMove);
+        if (!bestMove.equals(Move.nullMove) && !stop) TranspTable.set(board.hash(), alpha, depth, ttFlag, bestMove);
 
         return alpha;
     }
@@ -240,9 +260,16 @@ public class Search {
             MoveOrder.sortNextBestMove(moves, i);
             Move move = moves.get(i);
 
+            // Skip if underpromotion.
+            if (move.isPromotion() && move.flags() != Move.PR_QUEEN && move.flags() != Move.PC_QUEEN)
+                continue;
+
             board.push(move);
             value = -qSearch(board, depth - 1, ply + 1, -beta, -alpha);
             board.pop();
+
+            if (stop)
+                return 0;
 
             if (value > alpha) {
                 if (value >= beta) {
@@ -263,17 +290,14 @@ public class Search {
         return canApplyNull &&
                 !inCheck &&
                 depth >= NULL_MIN_DEPTH &&
-                (board.phase() < EConstants.PIECE_PHASES[PieceType.QUEEN] + EConstants.PIECE_PHASES[PieceType.BISHOP]) && // One queen + minor piece
+                board.hasNonPawnMaterial(board.getSideToPlay()) &&
                 Evaluation.evaluateState(board) >= beta;
     }
 
-    public static boolean canApplyLMR(Board board, int depth, Move move, int ply, int moveIndex, boolean fromCheck){
-        return depth >= LMR_MIN_DEPTH &&
-                moveIndex >= LMR_MOVES_WO_REDUCTION &&
-                move.flags() == Move.QUIET &&
-                !fromCheck &&
-                !MoveOrder.isKiller(board, move, ply) &&
-                !board.kingAttacked();
+    public static boolean canApplyLMR(int depth, Move move, int moveIndex){
+        return depth > LMR_MIN_DEPTH &&
+                moveIndex > LMR_MOVES_WO_REDUCTION &&
+                move.flags() == Move.QUIET;
     }
 
     public static String getPv(Board board, int depth){
@@ -308,6 +332,7 @@ public class Search {
         System.out.print(" time " + Limits.timeElapsed());
         System.out.print(" score cp " + IDScore);
         System.out.print(" nodes " + Statistics.totalNodes());
+        System.out.printf(" nps %.0f", Statistics.totalNodes()/((float)Limits.timeElapsed()/1000.0));
         System.out.println(" pv " + getPv(board, depth));
     }
 }

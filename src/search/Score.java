@@ -1,7 +1,5 @@
 package search;
-
 import evaluation.EConstants;
-import evaluation.Evaluation;
 
 public class Score {
 
