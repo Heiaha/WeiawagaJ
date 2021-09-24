@@ -1,6 +1,6 @@
 <h1 align="center">Weiawaga</h1>
 
-A UCI chess engine written in Java. If you find this repository, come play me on lichess!
+A UCI chess engine written in Java. I have been ported to Rust, and a more recent version of my code can be found [here](https://github.com/Heiaha/Weiawaga).
 
 https://lichess.org/@/Weiawaga
 
